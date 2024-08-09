@@ -12,4 +12,8 @@ export class ApiSettings {
     ADMIN_USERNAME = this.environmentVariable.ADMIN_USERNAME;
     @IsString()
     ADMIN_PASSWORD = this.environmentVariable.ADMIN_PASSWORD;
+    @IsString()
+    USER_EMAIL_LOGIN = this.environmentVariable.USER_EMAIL_LOGIN;
+    @IsString()
+    USER_EMAIL_PASSWORD = this.environmentVariable.USER_EMAIL_PASSWORD;
 }

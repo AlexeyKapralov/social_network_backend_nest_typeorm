@@ -45,7 +45,7 @@ export class UsersService {
             return notice;
         }
 
-        const user = await this.usersRepository.createUser(userInputBody);
+        const user = await this.usersRepository.createUser(userInputBody, true);
         notice.addData(user);
 
         return notice;

@@ -8,10 +8,17 @@ import configuration, {
 import { UsersModule } from './features/users/users-module';
 import { PassportModule } from '@nestjs/passport';
 import { AuthModule } from './features/auth/auth-module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Global()
 @Module({
     imports: [
+        ThrottlerModule.forRoot([
+            {
+                ttl: 10000,
+                limit: 5,
+            },
+        ]),
         TypeOrmModule.forRootAsync({
             useFactory: (configService: ConfigService<ConfigurationType>) => {
                 const environmentSettings = configService.get(
@@ -41,17 +48,17 @@ import { AuthModule } from './features/auth/auth-module';
                     synchronize: true, //false для raw_sql только
                 };
             },
-            inject: [ ConfigService ],
+            inject: [ConfigService],
         }),
         UsersModule,
         AuthModule,
         PassportModule,
         ConfigModule.forRoot({
             isGlobal: true,
-            load: [ configuration ],
+            load: [configuration],
             validate: validate,
             ignoreEnvFile: false, //для development
-            envFilePath: [ '.env' ],
+            envFilePath: ['.env'],
         }),
     ],
     providers: [],

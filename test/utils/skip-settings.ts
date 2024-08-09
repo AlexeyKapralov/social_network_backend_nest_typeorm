@@ -4,7 +4,8 @@ export const skipSettings = {
 
     //что пропустить?
     appTests: true,
-    userTests: false,
+    usersTests: true,
+    authTests: false,
 
     for(testName: TestsNames) {
         // If we need run all tests without skip
@@ -21,4 +22,4 @@ export const skipSettings = {
     },
 };
 
-export type TestsNames = 'appTests' | 'usersTests';
+export type TestsNames = 'appTests' | 'usersTests' | 'authTests';

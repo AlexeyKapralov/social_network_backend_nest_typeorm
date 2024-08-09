@@ -10,10 +10,12 @@ import { ApiSettings } from '../../src/settings/env/api-settings';
 import { HttpStatus } from '@nestjs/common';
 import { Connection, DataSource } from 'typeorm';
 import { getConnectionToken } from '@nestjs/typeorm';
+import { UsersManagerTest } from '../utils/users-manager.test';
 
 aDescribe(skipSettings.for('usersTests'))('UsersController (e2e)', () => {
     let app: NestExpressApplication;
     let dataSource: DataSource;
+    let usersManagerTest: UsersManagerTest;
 
     beforeAll(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -24,7 +26,7 @@ aDescribe(skipSettings.for('usersTests'))('UsersController (e2e)', () => {
             // useFactory используется если нужно передававть какие-то данные внутрь, если данные передававть не надо, то используется UseClass
             // .useFactory({
             //         factory: (usersRepo: UsersRepository) => {
-            //             return new UserServiceMock(usersRepo, {
+            //             return new EmailServiceMock(usersRepo, {
             //                 count: 50
             //             } )
             //         },
@@ -38,8 +40,21 @@ aDescribe(skipSettings.for('usersTests'))('UsersController (e2e)', () => {
 
         dataSource = app.get<DataSource>(DataSource);
         await dataSource.query(`
-            TRUNCATE 
-                public.user`);
+            DO $$
+            DECLARE
+                table_name text;
+            BEGIN
+                FOR table_name IN
+                    SELECT tablename
+                    FROM pg_tables
+                    WHERE schemaname = 'public'
+                LOOP
+                    EXECUTE 'TRUNCATE TABLE ' || quote_ident(table_name) || ' CASCADE;';
+                END LOOP;
+            END $$;
+        `);
+
+        usersManagerTest = new UsersManagerTest(app);
     });
 
     afterAll(async () => {
@@ -47,98 +62,42 @@ aDescribe(skipSettings.for('usersTests'))('UsersController (e2e)', () => {
     });
 
     it('should create user', async () => {
-        const configService = app.get(ConfigService);
-        const apiSettings = configService.get<ApiSettings>('apiSettings');
-        const userName = apiSettings.ADMIN_USERNAME;
-        const userPassword = apiSettings.ADMIN_PASSWORD;
-
-        const buff = Buffer.from(`${userName}:${userPassword}`, 'utf-8');
-        const decodedAuth = buff.toString('base64');
-
-        const postResponse = await request(app.getHttpServer())
-            .post('/sa/users')
-            .set({ authorization: `Basic ${decodedAuth}` })
-            .send({
-                email: 'alexey@kapralov0.site',
-                login: 'Aa1',
-                password: '123456',
-            })
-            .expect(HttpStatus.CREATED);
-
-        expect(postResponse.body).toEqual({
-            id: expect.stringMatching(
-                /^(?!00000000-0000-0000-0000-000000000000)([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/,
-            ),
+        const userInputBody = {
             email: 'alexey@kapralov0.site',
             login: 'Aa1',
-            createdAt: expect.stringMatching(
-                /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
-            ),
-        });
+            password: '123456',
+        };
+
+        await usersManagerTest.createUser(userInputBody);
     });
 
     it('should create user2', async () => {
-        const configService = app.get(ConfigService);
-        const apiSettings = configService.get<ApiSettings>('apiSettings');
-        const userName = apiSettings.ADMIN_USERNAME;
-        const userPassword = apiSettings.ADMIN_PASSWORD;
-
-        const buff = Buffer.from(`${userName}:${userPassword}`, 'utf-8');
-        const decodedAuth = buff.toString('base64');
-
-        const postResponse = await request(app.getHttpServer())
-            .post('/sa/users')
-            .set({ authorization: `Basic ${decodedAuth}` })
-            .send({
-                email: 'alexey@kapralov1.site',
-                login: 'Aa2',
-                password: '123456',
-            })
-            .expect(HttpStatus.CREATED);
-
-        expect.setState({
-            userId: postResponse.body.id,
-        });
-
-        expect(postResponse.body).toEqual({
-            id: expect.stringMatching(
-                /^(?!00000000-0000-0000-0000-000000000000)([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/,
-            ),
+        const userInputBody = {
             email: 'alexey@kapralov1.site',
             login: 'Aa2',
-            createdAt: expect.stringMatching(
-                /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
-            ),
+            password: '123456',
+        };
+        const expectedStatus = HttpStatus.CREATED;
+
+        const user = await usersManagerTest.createUser(
+            userInputBody,
+            expectedStatus,
+        );
+
+        expect.setState({
+            userId: user.userId,
         });
     });
 
     it(`shouldn't create user2`, async () => {
-        const configService = app.get(ConfigService);
-        const apiSettings = configService.get<ApiSettings>('apiSettings');
-        const userName = apiSettings.ADMIN_USERNAME;
-        const userPassword = apiSettings.ADMIN_PASSWORD;
+        const userInputBody = {
+            email: 'alexey@kapralov1.site',
+            login: 'Aa2',
+            password: '123456',
+        };
+        const expectedStatus = HttpStatus.BAD_REQUEST;
 
-        const buff = Buffer.from(`${userName}:${userPassword}`, 'utf-8');
-        const decodedAuth = buff.toString('base64');
-
-        const postResponse2 = await request(app.getHttpServer())
-            .post('/sa/users')
-            .set({ authorization: `Basic ${decodedAuth}` })
-            .send({
-                email: 'alexey@kapralov0.site',
-                login: 'Aa1',
-                password: '123456',
-            })
-            .expect(HttpStatus.BAD_REQUEST);
-
-        expect(postResponse2.body).toEqual({
-            errorsMessages: expect.arrayContaining([
-                {
-                    message: expect.any(String),
-                    field: expect.any(String),
-                },
-            ]),
-        });
+        await usersManagerTest.createUser(userInputBody, expectedStatus);
     });
 
     it('get all users', async () => {

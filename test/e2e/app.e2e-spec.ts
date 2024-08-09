@@ -18,7 +18,7 @@ aDescribe(skipSettings.for('appTests'))('AppController (e2e)', () => {
             // useFactory используется если нужно передававть какие-то данные внутрь, если данные передававть не надо, то используется UseClass
             // .useFactory({
             //         factory: (usersRepo: UsersRepository) => {
-            //             return new UserServiceMock(usersRepo, {
+            //             return new EmailServiceMock(usersRepo, {
             //                 count: 50
             //             } )
             //         },
