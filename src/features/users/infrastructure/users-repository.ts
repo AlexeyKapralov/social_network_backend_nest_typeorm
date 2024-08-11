@@ -56,4 +56,15 @@ export class UsersRepository {
         );
         return isUpdated.affected === 1;
     }
+
+    async confirmCode(code: string): Promise<boolean> {
+        const userRepository = this.dataSource.getRepository(User);
+
+        const user = await userRepository.update({
+            confirmationCode: code,
+            isDeleted: false,
+            isConfirmed: false,
+            createdAt,
+        });
+    }
 }

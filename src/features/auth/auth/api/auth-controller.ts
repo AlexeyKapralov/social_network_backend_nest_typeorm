@@ -11,6 +11,7 @@ import { UserInputDto } from '../../../users/api/dto/input/user-input-dto';
 import { AuthService } from '../application/auth-service';
 import { ThrottlerBehindProxyGuard } from '../guards/throttle-behind-proxy';
 import { RegistrationEmailResendingDto } from './dto/input/registration-email-resending-dto';
+import { RegistrationConfirmationCodeDto } from './dto/input/registration-confirmation-code-dto';
 
 @UseGuards(ThrottlerBehindProxyGuard)
 @Controller('auth')
@@ -55,5 +56,13 @@ export class AuthController {
                 }),
             );
         }
+    }
+
+    @Post('registration-confirmation')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async confirmRegistration(
+        @Body() confirmRegistrationBody: RegistrationConfirmationCodeDto,
+    ) {
+        await this.authService.registrationUser();
     }
 }

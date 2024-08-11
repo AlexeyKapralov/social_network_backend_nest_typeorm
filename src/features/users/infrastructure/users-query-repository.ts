@@ -21,6 +21,17 @@ export class UsersQueryRepository {
         });
     }
 
+    async findUserByConfirmationCode(confirmationCode: string): Promise<User> {
+        const userRepository = this.dataSource.getRepository(User);
+
+        return await userRepository.findOne({
+            where: {
+                confirmationCode: confirmationCode,
+                isDeleted: false,
+            },
+        });
+    }
+
     async findUserById(userId: string): Promise<User> {
         const userRepository = this.dataSource.getRepository(User);
 

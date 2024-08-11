@@ -74,6 +74,33 @@ export class AuthService {
         return notice;
     }
 
+    async confirmCode(code: string): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const user =
+            await this.userQueryRepository.findUserByConfirmationCode(code);
+        if (!user) {
+            notice.addError('confirmation code is incorrect');
+            return notice;
+        }
+
+        let expirationDateOfCode = new Date(
+            new Date().setDate(new Date().getDate() + 1),
+        );
+        if (
+            user.isConfirmed === true ||
+            user.createdAt > expirationDateOfCode
+        ) {
+            notice.addError(
+                'confirmation code expired or already have been applied',
+            );
+            return notice;
+        }
+
+        await this.userRepository.updateConfirmationCode();
+        return notice;
+    }
+
     async resendEmail(
         registrationEmailResendingBody: RegistrationEmailResendingDto,
     ): Promise<InterlayerNotice> {
@@ -106,7 +133,7 @@ export class AuthService {
         const html = `
 				 <h1>Your confirmation code</h1>
 				 <p>Here is your new confirmation code, please follow the 
-                     <a href='https://ab.com?code=${newConfirmationCode}'>link</a>below:
+                     <a href='https://ab.com?code=${newConfirmationCode}'>link </a>below:
 				 </p>
 			`;
         try {

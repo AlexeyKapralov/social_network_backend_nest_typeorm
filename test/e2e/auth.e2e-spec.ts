@@ -5,13 +5,8 @@ import { aDescribe } from '../utils/aDescribe';
 import { skipSettings } from '../utils/skip-settings';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from '../../src/settings/apply-app-settings';
-import { ConfigService } from '@nestjs/config';
-import { ApiSettings } from '../../src/settings/env/api-settings';
 import { HttpStatus } from '@nestjs/common';
-import { Connection, DataSource } from 'typeorm';
-import { getConnectionToken } from '@nestjs/typeorm';
-import { UsersManagerTest } from '../utils/users-manager.test';
-import { UsersService } from '../../src/features/users/application/users-service';
+import { DataSource } from 'typeorm';
 import { EmailService } from '../../src/base/services/email-service';
 import { EmailServiceMock } from '../mock/email-service-mock';
 
@@ -61,7 +56,6 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
         await app.close();
     });
 
-    //todo подтвердить код
     //todo отправить письмо восстановления
     //todo подтвердить восстановление
     //todo логин
@@ -71,7 +65,7 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
 
     //регистрация
     it('should register user', async () => {
-        const isDeleteUser = await request(app.getHttpServer())
+        await request(app.getHttpServer())
             .post(`/auth/registration`)
             .send({
                 login: 'oK4SUBl_Af',
@@ -79,6 +73,18 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
                 email: 'example@example.com',
             })
             .expect(HttpStatus.NO_CONTENT);
+
+        const confirmationCode = await dataSource.query(
+            `
+            SELECT "confirmationCode" FROM public.user
+            WHERE email = $1
+        `,
+            ['example@example.com'],
+        );
+
+        expect.setState({
+            confirmationCode: confirmationCode[0].confirmationCode,
+        });
     });
 
     it(`shouldn't register user with existed login and email`, async () => {
@@ -134,7 +140,36 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
         const isDeleteUser = await request(app.getHttpServer())
             .post(`/auth/registration-email-resending`)
             .send({
-                email: 'oK4SUBl_Af',
+                email: 'example@example.com',
+            })
+            .expect(HttpStatus.NO_CONTENT);
+
+        const newConfirmationCode = await dataSource.query(`
+            SELECT "confirmationCode" FROM public.user
+            WHERE email = 'example@example.com'
+        `);
+
+        const { confirmationCode } = expect.getState();
+        expect(newConfirmationCode[0].confirmationCode).not.toEqual(
+            confirmationCode,
+        );
+    });
+
+    it(`shouldn't resend email with incorrect data`, async () => {
+        const isDeleteUser = await request(app.getHttpServer())
+            .post(`/auth/registration-email-resending`)
+            .send({
+                email: 'example_no_exist@example.com',
+            })
+            .expect(HttpStatus.BAD_REQUEST);
+    });
+
+    //подтвердить код
+    it(`should confirm code`, async () => {
+        const isConfirmCode = await request(app.getHttpServer())
+            .post(`/auth/registration-confirmation`)
+            .send({
+                code: 'string',
             })
             .expect(HttpStatus.NO_CONTENT);
     });
