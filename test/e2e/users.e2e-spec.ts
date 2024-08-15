@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../../src/app-module';
 import { aDescribe } from '../utils/aDescribe';
 import { skipSettings } from '../utils/skip-settings';
@@ -8,8 +8,7 @@ import { applyAppSettings } from '../../src/settings/apply-app-settings';
 import { ConfigService } from '@nestjs/config';
 import { ApiSettings } from '../../src/settings/env/api-settings';
 import { HttpStatus } from '@nestjs/common';
-import { Connection, DataSource } from 'typeorm';
-import { getConnectionToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { UsersManagerTest } from '../utils/users-manager.test';
 
 aDescribe(skipSettings.for('usersTests'))('UsersController (e2e)', () => {

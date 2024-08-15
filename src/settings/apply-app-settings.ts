@@ -1,11 +1,10 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { useContainer } from 'class-validator';
 import { AppModule } from '../app-module';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import {
     BadRequestException,
     ClassSerializerInterceptor,
-    UseInterceptors,
     ValidationPipe,
 } from '@nestjs/common';
 import { HttpExceptionFilter } from '../common/exception-filters/http-exception-filter';

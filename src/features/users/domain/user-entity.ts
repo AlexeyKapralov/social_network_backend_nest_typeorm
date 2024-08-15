@@ -35,6 +35,10 @@ export class User {
     @Exclude()
     isConfirmed: boolean;
 
+    @Column()
+    @Exclude()
+    confirmationCodeExpireDate: Date;
+
     // setLogin(newLogin: string) {
     //     this.login = newLogin;
     // }

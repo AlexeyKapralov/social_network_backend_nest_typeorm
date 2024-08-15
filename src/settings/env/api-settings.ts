@@ -1,5 +1,5 @@
 import { EnvironmentVariable } from './env-settings';
-import { IsString } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
 
 export class ApiSettings {
     constructor(private environmentVariable: EnvironmentVariable) {}
@@ -16,4 +16,10 @@ export class ApiSettings {
     USER_EMAIL_LOGIN = this.environmentVariable.USER_EMAIL_LOGIN;
     @IsString()
     USER_EMAIL_PASSWORD = this.environmentVariable.USER_EMAIL_PASSWORD;
+    @Matches('\\d+(?: days|m|s)')
+    ACCESS_TOKEN_EXPIRATION_LIVE =
+        this.environmentVariable.ACCESS_TOKEN_EXPIRATION_LIVE;
+    @Matches('\\d+(?: days|m|s)')
+    REFRESH_TOKEN_EXPIRATION_LIVE =
+        this.environmentVariable.REFRESH_TOKEN_EXPIRATION_LIVE;
 }

@@ -10,6 +10,15 @@ import { EmailService } from '../../../../base/services/email-service';
 import { UsersQueryRepository } from '../../../users/infrastructure/users-query-repository';
 import { RegistrationEmailResendingDto } from '../api/dto/input/registration-email-resending-dto';
 import { v4 as uuid } from 'uuid';
+import { NewPasswordRecoveryInputDto } from '../api/dto/input/new-password-recovery-input-dto';
+import { CryptoService } from '../../../../base/services/crypto-service';
+import { LoginInputDto } from '../api/dto/input/login-input-dto';
+import { TokensDto } from '../../../../base/models/tokens-dto';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { ApiSettings } from '../../../../settings/env/api-settings';
+import { DeviceService } from '../../devices/application/device-service';
+import ms from 'ms';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +26,10 @@ export class AuthService {
         private readonly userRepository: UsersRepository,
         private readonly userQueryRepository: UsersQueryRepository,
         private readonly emailService: EmailService,
+        private readonly cryptoService: CryptoService,
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService,
+        private readonly deviceService: DeviceService,
     ) {}
     async registrationUser(userInputBody: UserInputDto) {
         const notice = new InterlayerNotice<User>();
@@ -80,24 +93,35 @@ export class AuthService {
         const user =
             await this.userQueryRepository.findUserByConfirmationCode(code);
         if (!user) {
-            notice.addError('confirmation code is incorrect');
-            return notice;
-        }
-
-        let expirationDateOfCode = new Date(
-            new Date().setDate(new Date().getDate() + 1),
-        );
-        if (
-            user.isConfirmed === true ||
-            user.createdAt > expirationDateOfCode
-        ) {
             notice.addError(
-                'confirmation code expired or already have been applied',
+                'confirmation code is incorrect',
+                'code',
+                InterlayerStatuses.BAD_REQUEST,
             );
             return notice;
         }
 
-        await this.userRepository.updateConfirmationCode();
+        if (
+            user.isConfirmed === true ||
+            user.confirmationCodeExpireDate < new Date()
+        ) {
+            notice.addError(
+                'confirmation code expired or already have been applied',
+                'code',
+                InterlayerStatuses.BAD_REQUEST,
+            );
+            return notice;
+        }
+
+        const isConfirmCode = await this.userRepository.confirmCode(code);
+        if (!isConfirmCode) {
+            notice.addError(
+                'confirmation code did not confirmed',
+                'code',
+                InterlayerStatuses.BAD_REQUEST,
+            );
+            return notice;
+        }
         return notice;
     }
 
@@ -131,11 +155,11 @@ export class AuthService {
             return notice;
         }
         const html = `
-				 <h1>Your confirmation code</h1>
-				 <p>Here is your new confirmation code, please follow the 
-                     <a href='https://ab.com?code=${newConfirmationCode}'>link </a>below:
-				 </p>
-			`;
+             <h1>Your confirmation code</h1>
+             <p>Here is your new confirmation code, please follow the 
+                 <a href='https://ab.com?code=${newConfirmationCode}'>link </a>below:
+             </p>
+        `;
         try {
             await this.emailService.sendEmail(
                 user.email,
@@ -145,6 +169,147 @@ export class AuthService {
         } catch (e) {
             console.error(`some problems with resend confirmation code ${e}`);
         }
+        return notice;
+    }
+
+    async passwordResetEmail(
+        registrationEmailResendingBody: RegistrationEmailResendingDto,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const user = await this.userQueryRepository.findUserByEmail(
+            registrationEmailResendingBody.email,
+        );
+        if (!user) {
+            return notice;
+        }
+        const newConfirmationCode = uuid();
+        const newPassword = uuid();
+        const isUpdatedUser = await this.userRepository.updateConfirmationCode(
+            user.id,
+            newConfirmationCode,
+        );
+        const isUpdatedPassword =
+            await this.userRepository.updatePasswordByUserId(
+                user.id,
+                newPassword,
+            );
+        if (!isUpdatedUser || !isUpdatedPassword) {
+            return notice;
+        }
+        const html = `
+             <h1>Your new confirmation code</h1>
+             <p>Here is your new confirmation code, please follow the 
+                 <a href='https://ab.com?code=${newConfirmationCode}'>link </a>below:
+             </p>
+        `;
+        try {
+            await this.emailService.sendEmail(
+                user.email,
+                'New Confirmation Code',
+                html,
+            );
+        } catch (e) {
+            console.error(`some problems with resend confirmation code ${e}`);
+        }
+        return notice;
+    }
+
+    async createNewPassword(
+        newPasswordRecoveryInputDto: NewPasswordRecoveryInputDto,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const user = await this.userQueryRepository.findUserByConfirmationCode(
+            newPasswordRecoveryInputDto.recoveryCode,
+        );
+        if (!user) {
+            notice.addError('user did not find');
+            return notice;
+        }
+
+        const passwordHash = await this.cryptoService.createPasswordHash(
+            newPasswordRecoveryInputDto.newPassword,
+        );
+
+        const isCreatedNewPass = await this.userRepository.updatePasswordByCode(
+            newPasswordRecoveryInputDto.recoveryCode,
+            passwordHash,
+        );
+        if (!isCreatedNewPass) {
+            notice.addError('pass did not updated');
+            return notice;
+        }
+        return notice;
+    }
+
+    async login(
+        loginInputDto: LoginInputDto,
+        ip: string,
+        deviceName: string,
+    ): Promise<InterlayerNotice<TokensDto>> {
+        const notice = new InterlayerNotice<TokensDto>();
+
+        let user: User;
+        const userByLogin = await this.userQueryRepository.findUserByLogin(
+            loginInputDto.loginOrEmail,
+        );
+        const userByEmail = await this.userQueryRepository.findUserByEmail(
+            loginInputDto.loginOrEmail,
+        );
+        if (!userByLogin && !userByEmail) {
+            notice.addError('user did not find');
+            return notice;
+        }
+        userByLogin ? (user = userByLogin) : (user = userByEmail);
+
+        const isPasswordValid = await this.cryptoService.comparePasswordHash(
+            loginInputDto.password,
+            user.password,
+        );
+        if (!isPasswordValid) {
+            notice.addError('password is not valid');
+            return notice;
+        }
+
+        //todo не сделано создание девайса и токенов
+        const apiSettings = this.configService.get<ApiSettings>('apiSettings', {
+            infer: true,
+        });
+        const accessTokenExpLive = apiSettings.ACCESS_TOKEN_EXPIRATION_LIVE;
+        const refreshTokenExpLive = apiSettings.REFRESH_TOKEN_EXPIRATION_LIVE;
+
+        // const dateNow = new Date();
+        // const atExp = new Date(Number(dateNow) + ms(accessTokenExpLive));
+        // const rtExp = new Date(Number(dateNow) + ms(refreshTokenExpLive));
+
+        const accessToken = this.jwtService.sign(
+            {
+                userId: userByEmail.id,
+            },
+            { expiresIn: accessTokenExpLive },
+        );
+        const refreshToken = this.jwtService.sign(
+            {
+                userId: userByEmail.id,
+            },
+            { expiresIn: refreshTokenExpLive },
+        );
+        const refreshTokenIAt = await this.jwtService.verifyAsync(refreshToken);
+
+        await this.deviceService.createDeviceOrUpdate(
+            user.id,
+            deviceName,
+            ip,
+            new Date(1000 * refreshTokenIAt.exp),
+            new Date(1000 * refreshTokenIAt.iat),
+        );
+
+        notice.addData({
+            accessToken,
+            refreshToken,
+        });
+
         return notice;
     }
 }

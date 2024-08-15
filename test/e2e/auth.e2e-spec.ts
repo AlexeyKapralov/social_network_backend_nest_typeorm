@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../../src/app-module';
 import { aDescribe } from '../utils/aDescribe';
 import { skipSettings } from '../utils/skip-settings';
@@ -56,9 +56,6 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
         await app.close();
     });
 
-    //todo отправить письмо восстановления
-    //todo подтвердить восстановление
-    //todo логин
     //todo рефреш токен
     //todo логаут
     //todo получить самого себя
@@ -165,21 +162,208 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
     });
 
     //подтвердить код
-    it(`should confirm code`, async () => {
+    it(`shouldn't confirm code with incorrect code`, async () => {
         const isConfirmCode = await request(app.getHttpServer())
             .post(`/auth/registration-confirmation`)
             .send({
-                code: 'string',
+                code: 'incorrectCode',
             })
-            .expect(HttpStatus.NO_CONTENT);
+            .expect(HttpStatus.BAD_REQUEST);
     });
 
-    it(`shouldn't resend email with incorrect data`, async () => {
+    it(`shouldn't confirm code with expired code`, async () => {
+        await dataSource.query(
+            `
+            UPDATE public.user
+            SET "createdAt" = $1
+            WHERE email = 'example@example.com';
+        `,
+            [new Date(new Date().setDate(new Date().getDate() - 20))],
+        );
+
+        const isConfirmCode = await request(app.getHttpServer())
+            .post(`/auth/registration-confirmation`)
+            .send({
+                code: 'incorrectCode',
+            })
+            .expect(HttpStatus.BAD_REQUEST);
+    });
+
+    it(`should resend email`, async () => {
         const isDeleteUser = await request(app.getHttpServer())
             .post(`/auth/registration-email-resending`)
             .send({
                 email: 'example@example.com',
             })
+            .expect(HttpStatus.NO_CONTENT);
+
+        const newConfirmationCode = await dataSource.query(`
+            SELECT "confirmationCode" FROM public.user
+            WHERE email = 'example@example.com'
+        `);
+
+        const { confirmationCode } = expect.getState();
+        expect(newConfirmationCode[0].confirmationCode).not.toEqual(
+            confirmationCode,
+        );
+    });
+
+    it(`should confirm code`, async () => {
+        const confirmationCodeArray = await dataSource.query(
+            `
+            SELECT "confirmationCode" FROM public.user
+            WHERE email = 'example@example.com'
+        `,
+        );
+
+        const isConfirmCode = await request(app.getHttpServer())
+            .post(`/auth/registration-confirmation`)
+            .send({
+                code: confirmationCodeArray[0].confirmationCode,
+            })
+            .expect(HttpStatus.NO_CONTENT);
+    });
+
+    //отправить письмо восстановления
+    it(`should send email with new confirmation code`, async () => {
+        const oldUserDataArray = await dataSource.query(`
+            SELECT "confirmationCode", "confirmationCodeExpireDate" FROM public.user
+            WHERE email = 'example@example.com'
+        `);
+
+        await request(app.getHttpServer())
+            .post(`/auth/password-recovery`)
+            .send({
+                email: 'example@example.com',
+            })
+            .expect(HttpStatus.NO_CONTENT);
+
+        const newUserDataArray = await dataSource.query(`
+            SELECT "confirmationCode", "confirmationCodeExpireDate" FROM public.user
+            WHERE email = 'example@example.com'
+        `);
+
+        const {
+            confirmationCode: oldConfirmationCode,
+            confirmationCodeExpireDate: oldConfirmationCodeExpireDate,
+        } = oldUserDataArray[0];
+        const {
+            confirmationCode: newConfirmationCode,
+            confirmationCodeExpireDate: newConfirmationCodeExpireDate,
+        } = newUserDataArray[0];
+
+        expect(oldConfirmationCodeExpireDate).not.toEqual(
+            newConfirmationCodeExpireDate,
+        );
+        expect(newConfirmationCode).not.toEqual(oldConfirmationCode);
+    });
+    it(`shouldn't send email with new confirmation code`, async () => {
+        const oldUserDataArray = await dataSource.query(`
+            SELECT "confirmationCode", "confirmationCodeExpireDate" FROM public.user
+            WHERE email = 'example@example.com'
+        `);
+
+        await request(app.getHttpServer())
+            .post(`/auth/password-recovery`)
+            .send({
+                email: 'incorrect_example@example.com',
+            })
+            .expect(HttpStatus.NO_CONTENT);
+
+        const newUserDataArray = await dataSource.query(`
+            SELECT "confirmationCode", "confirmationCodeExpireDate" FROM public.user
+            WHERE email = 'example@example.com'
+        `);
+
+        const {
+            confirmationCode: oldConfirmationCode,
+            confirmationCodeExpireDate: oldConfirmationCodeExpireDate,
+        } = oldUserDataArray[0];
+        const {
+            confirmationCode: newConfirmationCode,
+            confirmationCodeExpireDate: newConfirmationCodeExpireDate,
+        } = newUserDataArray[0];
+
+        expect(oldConfirmationCodeExpireDate).toEqual(
+            newConfirmationCodeExpireDate,
+        );
+        expect(newConfirmationCode).toEqual(oldConfirmationCode);
+
+        expect.setState({ oldConfirmationCode: oldConfirmationCode });
+    });
+
+    //подтвердить восстановление пароля
+    it(`should update password`, async () => {
+        const { oldConfirmationCode } = expect.getState();
+        const userArray = await dataSource.query(`
+            SELECT "password" FROM public.user
+        `);
+
+        await request(app.getHttpServer())
+            .post(`/auth/new-password`)
+            .send({
+                newPassword: 'string',
+                recoveryCode: oldConfirmationCode,
+            })
+            .expect(HttpStatus.NO_CONTENT);
+
+        const userArray2 = await dataSource.query(`
+            SELECT "password" FROM public.user
+        `);
+        expect(userArray[0].password).not.toEqual(userArray2[0].password);
+    });
+
+    it(`shouldn't update password with invalid password`, async () => {
+        const { oldConfirmationCode } = expect.getState();
+
+        await request(app.getHttpServer())
+            .post(`/auth/new-password`)
+            .send({
+                newPassword: 'a',
+                recoveryCode: oldConfirmationCode,
+            })
             .expect(HttpStatus.BAD_REQUEST);
+    });
+
+    it(`shouldn't update password with incorrect code`, async () => {
+        await request(app.getHttpServer())
+            .post(`/auth/new-password`)
+            .send({
+                newPassword: 'string',
+                recoveryCode: 'incorrect Code',
+            })
+            .expect(HttpStatus.BAD_REQUEST);
+    });
+
+    it(`shouldn't update password with expired code`, async () => {
+        await dataSource.query(
+            `
+            UPDATE public.user
+            SET "confirmationCodeExpireDate" = $1
+            WHERE email = 'example@example.com';
+        `,
+            [new Date(new Date().setDate(new Date().getDate() - 20))],
+        );
+        const { oldConfirmationCode } = expect.getState();
+
+        await request(app.getHttpServer())
+            .post(`/auth/new-password`)
+            .send({
+                newPassword: 'string',
+                recoveryCode: oldConfirmationCode,
+            })
+            .expect(HttpStatus.BAD_REQUEST);
+    });
+
+    //todo логин
+    it(`should login`, async () => {
+        const loginResponse = await request(app.getHttpServer())
+            .post(`/auth/login`)
+            .set('User-Agent', 'device1')
+            .send({
+                loginOrEmail: 'example@example.com',
+                password: 'string',
+            })
+            .expect(HttpStatus.OK);
     });
 });

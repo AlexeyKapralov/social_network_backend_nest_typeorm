@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, ILike } from 'typeorm';
+import { DataSource, ILike, LessThan, MoreThan } from 'typeorm';
 import { UserInputDto } from '../api/dto/input/user-input-dto';
 import { User } from '../domain/user-entity';
 import { v4 as uuid } from 'uuid';
@@ -28,6 +28,7 @@ export class UsersQueryRepository {
             where: {
                 confirmationCode: confirmationCode,
                 isDeleted: false,
+                confirmationCodeExpireDate: MoreThan(new Date()),
             },
         });
     }

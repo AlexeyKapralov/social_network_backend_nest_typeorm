@@ -1,7 +1,7 @@
 import { HttpStatus, INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiSettings } from '../../src/settings/env/api-settings';
-import * as request from 'supertest';
+import request from 'supertest';
 import { UserInputDto } from '../../src/features/users/api/dto/input/user-input-dto';
 
 export class UsersManagerTest {

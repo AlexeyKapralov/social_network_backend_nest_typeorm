@@ -44,8 +44,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
                     port: 5432,
                     // ssl: true,
                     // url: process.env.POSTGRESQL_CONNECTION_URI,
-                    autoLoadEntities: true, //false для raw_sql только
-                    synchronize: true, //false для raw_sql только
+                    autoLoadEntities: true, //false в продакшене и для raw_sql только
+                    synchronize: true, //false в продакшене и для raw_sql только
                 };
             },
             inject: [ConfigService],
