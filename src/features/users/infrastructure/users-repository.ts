@@ -57,6 +57,7 @@ export class UsersRepository {
         const isUpdated = await userRepository.update(
             { id: userId, isDeleted: false },
             {
+                isConfirmed: false,
                 confirmationCode: confirmationCode,
                 confirmationCodeExpireDate: new Date(
                     new Date().setDate(new Date().getDate() + 1),

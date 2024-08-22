@@ -2,8 +2,8 @@ import { Transform, TransformFnParams, Type } from 'class-transformer';
 import { IsNumber, IsString, Min } from 'class-validator';
 
 export enum SortDirection {
-    ASC = 'asc',
-    DESC = 'desc',
+    ASC = 'ASC',
+    DESC = 'DESC',
 }
 
 export class QueryDtoBase {
@@ -12,12 +12,14 @@ export class QueryDtoBase {
     @Transform(({ value }: TransformFnParams) => {
         switch (value) {
             case SortDirection.ASC:
-                return 1;
+                return SortDirection.ASC;
             case SortDirection.DESC:
-                return -1;
+                return SortDirection.DESC;
+            default:
+                'desc';
         }
     })
-    sortDirection: number = -1;
+    sortDirection: SortDirection = SortDirection.DESC;
     @Type(() => Number)
     @IsNumber()
     @Min(1)

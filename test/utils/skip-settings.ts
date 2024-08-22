@@ -2,10 +2,12 @@ export const skipSettings = {
     //будут ли запускаться все тесты?
     run_all_tests: false,
 
-    //что пропустить?
+    //что пропустить
     appTests: true,
     usersTests: true,
-    authTests: false,
+    authTests: true,
+    devicesTests: true,
+    blogsTests: false,
 
     for(testName: TestsNames) {
         // If we need run all tests without skip
@@ -22,4 +24,9 @@ export const skipSettings = {
     },
 };
 
-export type TestsNames = 'appTests' | 'usersTests' | 'authTests';
+export type TestsNames =
+    | 'appTests'
+    | 'usersTests'
+    | 'authTests'
+    | 'devicesTests'
+    | 'blogsTests';

@@ -1,24 +1,20 @@
 import {
     BadRequestException,
     Body,
-    ClassSerializerInterceptor,
     Controller,
     Delete,
     Get,
     HttpCode,
-    HttpException,
     HttpStatus,
     NotFoundException,
     Param,
     Post,
     Query,
     UseGuards,
-    UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from '../application/users-service';
 import { UserInputDto } from './dto/input/user-input-dto';
 import { AuthGuard } from '@nestjs/passport';
-import { InterlayerStatuses } from '../../../base/models/interlayer';
 import { BasicAuthGuard } from '../../auth/auth/guards/basic-auth-guard';
 import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
 

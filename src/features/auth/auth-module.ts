@@ -13,10 +13,16 @@ import { Device } from './devices/domain/device-entity';
 import { DeviceService } from './devices/application/device-service';
 import { DeviceRepository } from './devices/infrastructure/device-repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/domain/user-entity';
+import { DeviceQueryRepository } from './devices/infrastructure/device-query-repository';
+import { CqrsModule } from '@nestjs/cqrs';
+import { RefreshTokensUseCase } from './auth/application/usecases/refresh-tokens-usecase';
+import { JwtStrategy } from './auth/strategies/jwt-strategy';
+import { DeviceController } from './devices/api/device-controller';
+import { DeleteDevicesUseCase } from './devices/application/usecases/delete-devices-usecase';
 
 @Module({
     imports: [
+        CqrsModule,
         UsersModule,
         TypeOrmModule.forFeature([Device]),
         JwtModule.registerAsync({
@@ -33,15 +39,22 @@ import { User } from '../users/domain/user-entity';
             inject: [ConfigService],
         }),
     ],
-    controllers: [AuthController],
+    controllers: [AuthController, DeviceController],
     providers: [
         BasicStrategy,
+        JwtStrategy,
         AuthService,
+
+        DeleteDevicesUseCase,
+        RefreshTokensUseCase,
+
         DeviceService,
-        DeviceRepository,
         EmailService,
         CryptoService,
+
+        DeviceRepository,
+        DeviceQueryRepository,
     ],
-    exports: [AuthService],
+    exports: [AuthService, DeviceQueryRepository],
 })
 export class AuthModule {}

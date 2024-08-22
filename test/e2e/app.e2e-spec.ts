@@ -6,7 +6,7 @@ import { skipSettings } from '../utils/skip-settings';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from '../../src/settings/apply-app-settings';
 
-aDescribe(skipSettings.for('appTests'))('AppController (e2e)', () => {
+aDescribe(skipSettings.for('appTests'))('TestingController (e2e)', () => {
     let app: NestExpressApplication;
 
     beforeAll(async () => {

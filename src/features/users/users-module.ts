@@ -6,7 +6,6 @@ import { UsersService } from './application/users-service';
 import { UsersRepository } from './infrastructure/users-repository';
 import { UsersQueryRepository } from './infrastructure/users-query-repository';
 import { CryptoService } from '../../base/services/crypto-service';
-import { Device } from '../auth/devices/domain/device-entity';
 
 @Module({
     imports: [TypeOrmModule.forFeature([User])],

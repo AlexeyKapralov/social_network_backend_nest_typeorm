@@ -2,11 +2,13 @@ import {
     BadRequestException,
     Body,
     Controller,
+    Get,
     Headers,
     HttpCode,
     HttpStatus,
     Ip,
     Post,
+    Req,
     Res,
     UnauthorizedException,
     UseGuards,
@@ -18,12 +20,27 @@ import { RegistrationEmailResendingDto } from './dto/input/registration-email-re
 import { RegistrationConfirmationCodeDto } from './dto/input/registration-confirmation-code-dto';
 import { NewPasswordRecoveryInputDto } from './dto/input/new-password-recovery-input-dto';
 import { LoginInputDto } from './dto/input/login-input-dto';
-import { Response } from 'express';
+import { Response, Request } from 'express';
+import { RefreshTokenPayloadDto } from '../../../../common/dto/refresh-token-payload-dto';
+import {
+    RefreshTokensCommand,
+    RefreshTokensUseCaseResultType,
+} from '../application/usecases/refresh-tokens-usecase';
+import { InterlayerNotice } from '../../../../base/models/interlayer';
+import { CommandBus } from '@nestjs/cqrs';
+import { JwtAuthGuard } from '../guards/jwt-auth-guard';
+import { AccessTokenPayloadDto } from '../../../../common/dto/access-token-payload-dto';
+import { UsersQueryRepository } from '../../../users/infrastructure/users-query-repository';
+import { MeViewDto } from './dto/output/me-view-dto';
 
 @UseGuards(ThrottlerBehindProxyGuard)
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) {}
+    constructor(
+        private readonly authService: AuthService,
+        private readonly commandBus: CommandBus,
+        private readonly userQueryRepository: UsersQueryRepository,
+    ) {}
 
     @Post('registration')
     @HttpCode(HttpStatus.NO_CONTENT)
@@ -48,7 +65,6 @@ export class AuthController {
     async resendEmail(
         @Body() registrationEmailResendingBody: RegistrationEmailResendingDto,
     ) {
-        //todo дописать контроллер
         const interlayerResendEmail = await this.authService.resendEmail(
             registrationEmailResendingBody,
         );
@@ -133,6 +149,71 @@ export class AuthController {
         });
         return {
             accessToken: interlayerTokens.data.accessToken,
+        };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('refresh-token')
+    @HttpCode(HttpStatus.OK)
+    async refreshTokens(
+        @Req() req: any,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        const refreshTokenPayload: RefreshTokenPayloadDto = req.user.payload;
+        if (!refreshTokenPayload.deviceId) {
+            throw new UnauthorizedException();
+        }
+
+        const command = new RefreshTokensCommand(refreshTokenPayload);
+        const tokensInterlayer = await this.commandBus.execute<
+            RefreshTokensCommand,
+            InterlayerNotice<RefreshTokensUseCaseResultType>
+        >(command);
+        if (tokensInterlayer.hasError()) {
+            throw new UnauthorizedException();
+        }
+
+        res.cookie('refreshToken', tokensInterlayer.data.refreshToken, {
+            httpOnly: true,
+            secure: true,
+        });
+        return { accessToken: tokensInterlayer.data.accessToken };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('logout')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async logout(@Req() req: any) {
+        const refreshTokenPayload: RefreshTokenPayloadDto = req.user.payload;
+        if (!refreshTokenPayload.deviceId) {
+            throw new UnauthorizedException();
+        }
+
+        const logoutInterlayer =
+            await this.authService.logout(refreshTokenPayload);
+        if (logoutInterlayer.hasError()) {
+            throw new UnauthorizedException();
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('me')
+    @HttpCode(HttpStatus.OK)
+    async getInfoAboutCurrentUser(@Req() req: any) {
+        const refreshTokenPayload: AccessTokenPayloadDto = req.user.payload;
+        if (!refreshTokenPayload.userId) {
+            throw new UnauthorizedException();
+        }
+        const userViewDto = await this.userQueryRepository.findUserById(
+            refreshTokenPayload.userId,
+        );
+        if (!userViewDto) {
+            throw new UnauthorizedException();
+        }
+        return {
+            userId: userViewDto.id,
+            login: userViewDto.login,
+            email: userViewDto.email,
         };
     }
 }

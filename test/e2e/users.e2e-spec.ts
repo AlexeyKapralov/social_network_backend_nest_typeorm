@@ -147,7 +147,6 @@ aDescribe(skipSettings.for('usersTests'))('UsersController (e2e)', () => {
         const decodedAuth = buff.toString('base64');
 
         const { userId } = expect.getState();
-        console.log(userId);
         const isDeleteUser = await request(app.getHttpServer())
             .delete(`/sa/users/${userId}`)
             .set({ authorization: `Basic ${decodedAuth}` })

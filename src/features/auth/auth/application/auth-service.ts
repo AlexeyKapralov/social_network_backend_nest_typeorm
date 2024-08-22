@@ -19,6 +19,9 @@ import { ConfigService } from '@nestjs/config';
 import { ApiSettings } from '../../../../settings/env/api-settings';
 import { DeviceService } from '../../devices/application/device-service';
 import ms from 'ms';
+import { RefreshTokenPayloadDto } from '../../../../common/dto/refresh-token-payload-dto';
+import { DeviceQueryRepository } from '../../devices/infrastructure/device-query-repository';
+import { DeviceRepository } from '../../devices/infrastructure/device-repository';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +33,8 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         private readonly deviceService: DeviceService,
+        private readonly deviceQueryRepository: DeviceQueryRepository,
+        private readonly deviceRepository: DeviceRepository,
     ) {}
     async registrationUser(userInputBody: UserInputDto) {
         const notice = new InterlayerNotice<User>();
@@ -133,9 +138,9 @@ export class AuthService {
         const user = await this.userQueryRepository.findUserByEmail(
             registrationEmailResendingBody.email,
         );
-        if (!user) {
+        if (!user || user.isConfirmed === true) {
             notice.addError(
-                'email did not found',
+                'email did not found or already confirmed',
                 'email',
                 InterlayerStatuses.NOT_FOUND,
             );
@@ -267,49 +272,100 @@ export class AuthService {
             loginInputDto.password,
             user.password,
         );
+
         if (!isPasswordValid) {
             notice.addError('password is not valid');
             return notice;
         }
 
-        //todo не сделано создание девайса и токенов
-        const apiSettings = this.configService.get<ApiSettings>('apiSettings', {
-            infer: true,
-        });
-        const accessTokenExpLive = apiSettings.ACCESS_TOKEN_EXPIRATION_LIVE;
-        const refreshTokenExpLive = apiSettings.REFRESH_TOKEN_EXPIRATION_LIVE;
-
-        // const dateNow = new Date();
-        // const atExp = new Date(Number(dateNow) + ms(accessTokenExpLive));
-        // const rtExp = new Date(Number(dateNow) + ms(refreshTokenExpLive));
-
-        const accessToken = this.jwtService.sign(
-            {
-                userId: userByEmail.id,
-            },
-            { expiresIn: accessTokenExpLive },
-        );
-        const refreshToken = this.jwtService.sign(
-            {
-                userId: userByEmail.id,
-            },
-            { expiresIn: refreshTokenExpLive },
-        );
-        const refreshTokenIAt = await this.jwtService.verifyAsync(refreshToken);
-
-        await this.deviceService.createDeviceOrUpdate(
+        const tokens = await this.updateDevicesAndCreateTokens(
             user.id,
             deviceName,
             ip,
-            new Date(1000 * refreshTokenIAt.exp),
-            new Date(1000 * refreshTokenIAt.iat),
         );
 
         notice.addData({
-            accessToken,
-            refreshToken,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
         });
 
+        return notice;
+    }
+
+    async updateDevicesAndCreateTokens(
+        userId: string = undefined,
+        deviceName: string = undefined,
+        ip: string = undefined,
+        deviceId: string = undefined,
+    ): Promise<TokensDto | null> {
+        if (deviceId) {
+            const device = await this.deviceRepository.findDeviceById(deviceId);
+            if (!device) {
+                return null;
+            }
+            userId = device.userId;
+            deviceName = device.deviceName;
+            ip = device.ip;
+        }
+        const apiSettings = this.configService.get<ApiSettings>('apiSettings', {
+            infer: true,
+        });
+        let accessTokenExpLive = apiSettings.ACCESS_TOKEN_EXPIRATION_LIVE;
+        accessTokenExpLive = Number(ms(accessTokenExpLive)) / 1000;
+
+        let refreshTokenExpLive = apiSettings.REFRESH_TOKEN_EXPIRATION_LIVE;
+        refreshTokenExpLive = Number(ms(refreshTokenExpLive)) / 1000;
+
+        const dateNowNumber = Math.trunc(Date.now() / 1000);
+
+        const deviceInterlayer = await this.deviceService.createDeviceOrUpdate(
+            userId,
+            deviceName,
+            ip,
+            new Date((dateNowNumber + refreshTokenExpLive) * 1000),
+            new Date(dateNowNumber * 1000),
+        );
+
+        const accessToken = this.jwtService.sign({
+            userId: userId,
+            exp: dateNowNumber + accessTokenExpLive,
+            iat: dateNowNumber,
+        });
+        const refreshToken = this.jwtService.sign({
+            deviceId: deviceInterlayer.data.id,
+            exp: dateNowNumber + refreshTokenExpLive,
+            iat: dateNowNumber,
+        });
+
+        return {
+            accessToken,
+            refreshToken,
+        };
+    }
+
+    async logout(refreshTokenPayloadDto: RefreshTokenPayloadDto) {
+        const notice = new InterlayerNotice();
+
+        const isDeviceExpiredInterlayer =
+            await this.deviceService.checkDeviceExpiration(
+                refreshTokenPayloadDto.deviceId,
+                refreshTokenPayloadDto.iat,
+            );
+        if (isDeviceExpiredInterlayer.hasError()) {
+            notice.addError('device did not found');
+            return notice;
+        }
+
+        const newDate = new Date(Math.trunc(Date.now() / 1000) * 1000);
+        const isUpdatedDevice = await this.deviceService.updateDevice(
+            refreshTokenPayloadDto.deviceId,
+            newDate,
+            newDate,
+        );
+        if (isUpdatedDevice.hasError()) {
+            notice.addError('device did not updated');
+            return notice;
+        }
         return notice;
     }
 }

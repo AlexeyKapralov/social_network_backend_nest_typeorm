@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, ILike, LessThan, MoreThan } from 'typeorm';
-import { UserInputDto } from '../api/dto/input/user-input-dto';
+import { DataSource, Like, MoreThan } from 'typeorm';
 import { User } from '../domain/user-entity';
-import { v4 as uuid } from 'uuid';
 import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
+import { UserViewDto } from '../api/dto/output/user-view-dto';
+import { toUserViewDtoMapper } from '../../../base/mappers/user-view-mapper';
 
 @Injectable()
 export class UsersQueryRepository {
@@ -33,15 +33,16 @@ export class UsersQueryRepository {
         });
     }
 
-    async findUserById(userId: string): Promise<User> {
+    async findUserById(userId: string): Promise<UserViewDto | null> {
         const userRepository = this.dataSource.getRepository(User);
 
-        return await userRepository.findOne({
+        const user = await userRepository.findOne({
             where: {
                 id: userId,
                 isDeleted: false,
             },
         });
+        return user ? toUserViewDtoMapper(user) : null;
     }
 
     async findUserByLogin(login: string): Promise<User> {
@@ -58,33 +59,68 @@ export class UsersQueryRepository {
     async findUsers(query: QueryDtoWithEmailLogin): Promise<User[]> {
         const userRepository = this.dataSource.getRepository(User);
 
-        return await userRepository.find({
-            where: {
-                email: ILike(
-                    `%${query.searchEmailTerm === null ? '' : query.searchEmailTerm}%`,
-                ),
-                login: ILike(
-                    `%${query.searchLoginTerm === null ? '' : query.searchLoginTerm}%`,
-                ),
-                isDeleted: false,
-                isConfirmed: true,
-            },
-            order: {
-                [query.sortBy]: query.sortDirection,
-            },
-            skip: (query.pageNumber - 1) * query.pageSize,
-            take: query.pageSize,
-        });
+        let emailTerm =
+            query.searchEmailTerm === null
+                ? ''
+                : `%${query.searchEmailTerm.toLowerCase()}%`;
+        let loginTerm =
+            query.searchLoginTerm === null
+                ? ''
+                : `%${query.searchLoginTerm.toLowerCase()}%`;
+
+        if (emailTerm === '' && loginTerm === '') {
+            emailTerm = '%%';
+            loginTerm = '%%';
+        }
+        return await userRepository
+            .createQueryBuilder('u')
+            .where(
+                'u.isDeleted = :isDeleted and u.isConfirmed = :isConfirmed',
+                {
+                    isDeleted: false,
+                    isConfirmed: true,
+                },
+            )
+            .andWhere(
+                '(LOWER(u.email) like :emailTerm or LOWER(u.login) like :loginTerm)',
+                {
+                    emailTerm,
+                    loginTerm,
+                },
+            )
+            .orderBy(`"${query.sortBy}"`, query.sortDirection)
+            .take(query.pageSize)
+            .skip((query.pageNumber - 1) * query.pageSize)
+            .getMany();
     }
 
     async getCountUsers(emailTerm: string, loginTerm: string): Promise<number> {
         const userRepository = this.dataSource.getRepository(User);
 
-        return await userRepository.countBy({
-            email: ILike(`%${emailTerm === null ? '' : emailTerm}%`),
-            login: ILike(`%${loginTerm === null ? '' : loginTerm}%`),
-            isDeleted: false,
-            isConfirmed: true,
-        });
+        emailTerm = emailTerm === null ? '' : `%${emailTerm.toLowerCase()}%`;
+        loginTerm = loginTerm === null ? '' : `%${loginTerm.toLowerCase()}%`;
+
+        if (emailTerm === '' && loginTerm === '') {
+            emailTerm = '%%';
+            loginTerm = '%%';
+        }
+
+        return await userRepository
+            .createQueryBuilder('u')
+            .where(
+                'u.isDeleted = :isDeleted and u.isConfirmed = :isConfirmed',
+                {
+                    isDeleted: false,
+                    isConfirmed: true,
+                },
+            )
+            .andWhere(
+                '(LOWER(u.email) like :emailTerm or LOWER(u.login) like :loginTerm)',
+                {
+                    emailTerm,
+                    loginTerm,
+                },
+            )
+            .getCount();
     }
 }

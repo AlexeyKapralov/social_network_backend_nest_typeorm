@@ -1,16 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app-module';
-import { aDescribe } from '../utils/aDescribe';
-import { skipSettings } from '../utils/skip-settings';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from '../../src/settings/apply-app-settings';
 import { HttpStatus } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EmailService } from '../../src/base/services/email-service';
 import { EmailServiceMock } from '../mock/email-service-mock';
+import { JwtService } from '@nestjs/jwt';
+import { aDescribe } from '../utils/aDescribe';
+import { skipSettings } from '../utils/skip-settings';
+import { User } from '../../src/features/users/domain/user-entity';
 
 aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
+    // aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
     let app: NestExpressApplication;
     let dataSource: DataSource;
 
@@ -56,9 +59,10 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
         await app.close();
     });
 
-    //todo рефреш токен
-    //todo логаут
-    //todo получить самого себя
+    it('should check clearing database', async () => {
+        const users = await dataSource.getRepository(User).find();
+        expect(users.length).toBe(0);
+    });
 
     //регистрация
     it('should register user', async () => {
@@ -355,7 +359,7 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
             .expect(HttpStatus.BAD_REQUEST);
     });
 
-    //todo логин
+    //логин
     it(`should login`, async () => {
         const loginResponse = await request(app.getHttpServer())
             .post(`/auth/login`)
@@ -365,5 +369,154 @@ aDescribe(skipSettings.for('authTests'))('AuthController (e2e)', () => {
                 password: 'string',
             })
             .expect(HttpStatus.OK);
+
+        let rt = loginResponse.headers['set-cookie'][0];
+        rt = loginResponse.headers['set-cookie'][0].slice(13, rt.indexOf(';'));
+        expect.setState({
+            refreshToken: rt,
+        });
+        expect.setState({
+            accessToken: loginResponse.body.accessToken,
+        });
+
+        expect(
+            loginResponse.headers['set-cookie'][0].startsWith('refreshToken'),
+        ).toBeTruthy();
+        expect(loginResponse.body.accessToken).toBeDefined();
+
+        const device = await dataSource.query(
+            `
+            SELECT "deviceName" 
+            FROM public.device
+            WHERE "deviceName" = 'device1'
+        `,
+        );
+        expect(device[0]['deviceName']).toBe('device1');
+    });
+
+    it(`shouldn't login user with no exist login`, async () => {
+        const loginResponse = await request(app.getHttpServer())
+            .post(`/auth/login`)
+            .set('User-Agent', 'device1')
+            .send({
+                loginOrEmail: 'example-non-exist@example.com',
+                password: 'string',
+            })
+            .expect(HttpStatus.UNAUTHORIZED);
+    });
+
+    //todo получить самого себя
+    it(`should get info about user`, async () => {
+        const { accessToken } = expect.getState();
+        const jwtService = new JwtService();
+        const payload = jwtService.decode(accessToken);
+
+        const user = await dataSource.query(
+            `
+            SELECT "id", "email", "login"
+            FROM public.user
+            WHERE "id" = $1
+        `,
+            [payload.userId],
+        );
+
+        const authMeResponse = await request(app.getHttpServer())
+            .get(`/auth/me`)
+            .set('authorization', `Bearer ${accessToken}`)
+            .expect(HttpStatus.OK);
+
+        expect(authMeResponse.body).toEqual({
+            email: user[0].email,
+            login: user[0].login,
+            userId: payload.userId,
+        });
+    });
+
+    it(`shouldn't get info about user with incorrect bearer`, async () => {
+        const authMeResponse = await request(app.getHttpServer())
+            .get(`/auth/me`)
+            .set('authorization', `Bearer unknown`)
+            .expect(HttpStatus.UNAUTHORIZED);
+    });
+
+    // рефреш токен
+    it(`should refresh tokens`, async () => {
+        const { refreshToken } = expect.getState();
+
+        const refreshTokensResponse = await request(app.getHttpServer())
+            .post(`/auth/refresh-token`)
+            .set('cookie', `refreshToken=${refreshToken}`)
+            .expect(HttpStatus.CREATED);
+
+        const newRefreshToken = refreshTokensResponse.headers[
+            'set-cookie'
+        ][0].slice(13, 205);
+
+        const jwtService = new JwtService();
+        const payload = jwtService.decode(newRefreshToken);
+
+        const device = await dataSource.query(
+            `
+            SELECT "iat"
+            FROM public.device
+            WHERE "deviceName" = 'device1'
+        `,
+        );
+
+        expect(payload.iat).not.toBe(device[0]['iat']);
+        expect(refreshToken).not.toBe(newRefreshToken);
+        expect(refreshTokensResponse.body.accessToken).toBeDefined();
+    });
+
+    //логаут
+    it(`should logout`, async () => {
+        const { refreshToken } = expect.getState();
+
+        const refreshTokensResponse = await request(app.getHttpServer())
+            .post(`/auth/logout`)
+            .set('cookie', `refreshToken=${refreshToken}`)
+            .expect(HttpStatus.NO_CONTENT);
+
+        const jwtService = new JwtService();
+        const payload = jwtService.decode(refreshToken);
+
+        const device = await dataSource.query(
+            `
+            SELECT "iat", "exp"
+            FROM public.device
+            WHERE "deviceName" = 'device1'
+        `,
+        );
+
+        expect(payload.iat).not.toBe(device[0]['iat']);
+        expect(payload.exp).not.toBe(device[0]['exp']);
+    });
+
+    it(`shouldn't logout with incorrect jwt`, async () => {
+        const { refreshToken } = expect.getState();
+
+        const deviceBefore = await dataSource.query(
+            `
+            SELECT "iat", "exp"
+            FROM public.device
+            WHERE "deviceName" = 'device1'
+        `,
+        );
+
+        const refreshTokensResponse = await request(app.getHttpServer())
+            .post(`/auth/logout`)
+            .set('cookie', `refreshToken=incorrectjwt`)
+            .expect(HttpStatus.UNAUTHORIZED);
+
+        const deviceAfter = await dataSource.query(
+            `
+            SELECT "iat", "exp"
+            FROM public.device
+            WHERE "deviceName" = 'device1'
+        `,
+        );
+
+        expect(deviceBefore.iat).toBe(deviceAfter.iat);
+        expect(deviceBefore.exp).toBe(deviceAfter.exp);
     });
 });

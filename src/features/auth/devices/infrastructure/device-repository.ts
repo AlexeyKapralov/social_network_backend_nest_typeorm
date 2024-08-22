@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, MoreThan, Not } from 'typeorm';
 import { Device } from '../domain/device-entity';
 
 @Injectable()
@@ -30,18 +30,18 @@ export class DeviceRepository {
         deviceId: string,
         exp: Date,
         iat: Date,
-    ): Promise<boolean> {
+    ): Promise<Device | null> {
         const deviceRepository = this.dataSource.getRepository(Device);
-        const isUpdated = await deviceRepository.update(
-            {
-                id: deviceId,
-            },
-            {
-                iat: iat,
-                exp: exp,
-            },
-        );
-        return isUpdated.affected === 1;
+        const device = await deviceRepository.findOne({
+            where: { id: deviceId },
+        });
+        if (!device) {
+            return null;
+        }
+        device.exp = exp;
+        device.iat = iat;
+        await deviceRepository.save(device);
+        return device;
     }
 
     async findDevice(userId: string, deviceName: string, ip: string) {
@@ -54,5 +54,50 @@ export class DeviceRepository {
                 ip: ip,
             },
         });
+    }
+
+    async findDeviceByIdAndIat(
+        deviceId: string,
+        iat: Date,
+    ): Promise<Device | null> {
+        const deviceRepository = this.dataSource.getRepository(Device);
+
+        return await deviceRepository.findOne({
+            where: {
+                id: deviceId,
+                iat: iat,
+            },
+        });
+    }
+
+    async findDeviceById(deviceId: string): Promise<Device> {
+        const deviceRepository = this.dataSource.getRepository(Device);
+
+        return await deviceRepository.findOne({
+            where: {
+                id: deviceId,
+                exp: MoreThan(new Date()),
+            },
+        });
+    }
+
+    async deleteAllDevicesForUser(
+        userId: string,
+        currentDeviceId: string,
+    ): Promise<boolean> {
+        const newDate = new Date();
+        const deviceRepository = await this.dataSource
+            .getRepository(Device)
+            .update(
+                {
+                    userId: userId,
+                    id: Not(currentDeviceId),
+                },
+                {
+                    iat: newDate,
+                    exp: newDate,
+                },
+            );
+        return deviceRepository.affected > 0;
     }
 }

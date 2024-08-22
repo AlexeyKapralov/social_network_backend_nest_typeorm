@@ -9,6 +9,8 @@ import { UsersModule } from './features/users/users-module';
 import { PassportModule } from '@nestjs/passport';
 import { AuthModule } from './features/auth/auth-module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { TestingModule } from './features/testing/testing-module';
+import BlogsModule from './features/blogs/blogs-module';
 
 @Global()
 @Module({
@@ -44,15 +46,18 @@ import { ThrottlerModule } from '@nestjs/throttler';
                     port: 5432,
                     // ssl: true,
                     // url: process.env.POSTGRESQL_CONNECTION_URI,
-                    autoLoadEntities: true, //false в продакшене и для raw_sql только
-                    synchronize: true, //false в продакшене и для raw_sql только
+                    autoLoadEntities: false, //false в продакшене и для raw_sql только
+                    synchronize: false, //false в продакшене и для raw_sql только
+                    // logging: true,
                 };
             },
             inject: [ConfigService],
         }),
         UsersModule,
         AuthModule,
+        BlogsModule,
         PassportModule,
+        TestingModule.register(process.env.ENV),
         ConfigModule.forRoot({
             isGlobal: true,
             load: [configuration],

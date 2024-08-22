@@ -12,7 +12,6 @@ import { Reflector } from '@nestjs/core';
 
 export const applyAppSettings = (app: NestExpressApplication) => {
     app.enableCors();
-
     app.set('trust proxy', true);
 
     // Для внедрения зависимостей в validator constraint
