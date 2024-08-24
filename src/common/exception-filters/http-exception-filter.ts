@@ -22,6 +22,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
                 if (Array.isArray(responseBody.message)) {
                     responseBody.message.forEach((e) => errorsResponse.push(e));
+                } else if (typeof responseBody.message !== 'object') {
+                    errorsResponse.push(responseBody);
                 } else {
                     errorsResponse.push(responseBody.message);
                 }

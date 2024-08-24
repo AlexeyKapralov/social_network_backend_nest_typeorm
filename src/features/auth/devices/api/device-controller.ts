@@ -7,6 +7,7 @@ import {
     HttpStatus,
     NotFoundException,
     Param,
+    ParseUUIDPipe,
     Req,
     UnauthorizedException,
     UseGuards,
@@ -69,7 +70,7 @@ export class DeviceController {
     @HttpCode(HttpStatus.NO_CONTENT)
     async deleteSpecificDevice(
         @Req() req: any,
-        @Param('deviceId') deviceId: string,
+        @Param('deviceId', ParseUUIDPipe) deviceId: string,
     ) {
         const refreshTokenPayload: RefreshTokenPayloadDto = req.user.payload;
         if (!refreshTokenPayload.deviceId) {

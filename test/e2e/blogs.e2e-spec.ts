@@ -4,22 +4,14 @@ import { AppModule } from '../../src/app-module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from '../../src/settings/apply-app-settings';
 import { HttpStatus } from '@nestjs/common';
-import { DataSource, MoreThan } from 'typeorm';
-import { EmailService } from '../../src/base/services/email-service';
-import { EmailServiceMock } from '../mock/email-service-mock';
-import { JwtService } from '@nestjs/jwt';
+import { DataSource } from 'typeorm';
 import { aDescribe } from '../utils/aDescribe';
 import { skipSettings } from '../utils/skip-settings';
-import { Device } from '../../src/features/auth/devices/domain/device-entity';
-import { v4 as uuid } from 'uuid';
-import { AuthService } from '../../src/features/auth/auth/application/auth-service';
-import { IsString } from 'class-validator';
-import { User } from '../../src/features/users/domain/user-entity';
-import { LoginInputDto } from '../../src/features/auth/auth/api/dto/input/login-input-dto';
-import { CryptoService } from '../../src/base/services/crypto-service';
-import { UsersManagerTest } from '../utils/users-manager.test';
 import { BlogsManagerTest } from '../utils/blogs-manager.test';
-import { Blog } from '../../src/features/blogs/domain/blog-entity';
+import { ConfigService } from '@nestjs/config';
+import { ApiSettings } from '../../src/settings/env/api-settings';
+import { Blog } from '../../src/features/blogs/blogs/domain/blog-entity';
+import { BlogInputDto } from '../../src/features/blogs/blogs/api/dto/input/blog-input-dto';
 
 aDescribe(skipSettings.for('blogsTests'))('BlogsSaController (e2e)', () => {
     let app: NestExpressApplication;
@@ -71,11 +63,42 @@ aDescribe(skipSettings.for('blogsTests'))('BlogsSaController (e2e)', () => {
     });
 
     //создание блога
+    let blog;
     it('should create blog', async () => {
-        const blog = await blogsManagerTest.createRandomBlog();
+        blog = await blogsManagerTest.createRandomBlog();
 
         const blogs = await dataSource.getRepository(Blog).find();
 
         expect(blogs.length).toBe(1);
+    });
+
+    //обновление блога
+    it('should update blog', async () => {
+        const configService = app.get(ConfigService);
+        const apiSettings = configService.get<ApiSettings>('apiSettings');
+        const userName = apiSettings.ADMIN_USERNAME;
+        const userPassword = apiSettings.ADMIN_PASSWORD;
+
+        const buff = Buffer.from(`${userName}:${userPassword}`, 'utf-8');
+        const decodedAuth = buff.toString('base64');
+
+        const blogInputBody: BlogInputDto = {
+            name: 'newName',
+            description: 'newDescription',
+            websiteUrl: 'https://someurl.com',
+        };
+
+        await request(app.getHttpServer())
+            .put(`/sa/blogs/${blog.blogId}`)
+            .set({ authorization: `Basic ${decodedAuth}` })
+            .send(blogInputBody)
+            .expect(HttpStatus.NO_CONTENT);
+
+        const blogs = await dataSource.getRepository(Blog).find();
+
+        expect(blogs[0].id).toBe(blog.blogId);
+        expect(blogs[0].name).toBe(blogInputBody.name);
+        expect(blogs[0].description).toBe(blogInputBody.description);
+        expect(blogs[0].websiteUrl).toBe(blogInputBody.websiteUrl);
     });
 });

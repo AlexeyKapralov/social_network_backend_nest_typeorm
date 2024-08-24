@@ -1,4 +1,10 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    BaseEntity,
+    Column,
+    DeleteDateColumn,
+    Entity,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
 import { BlogInputDto } from '../api/dto/input/blog-input-dto';
 
 @Entity()
@@ -21,6 +27,9 @@ export class Blog extends BaseEntity {
     @Column({ default: true })
     isMembership: boolean;
 
+    @DeleteDateColumn({ nullable: true })
+    deletedDate: Date;
+
     static async createBlog(blogInputDto: BlogInputDto): Promise<Blog> {
         const blog = new Blog();
         blog.name = blogInputDto.name;
@@ -28,6 +37,7 @@ export class Blog extends BaseEntity {
         blog.websiteUrl = blogInputDto.websiteUrl;
         blog.createdAt = new Date();
         blog.isMembership = true;
+
         await blog.save();
 
         return blog;

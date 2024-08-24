@@ -11,6 +11,11 @@ import { AuthModule } from './features/auth/auth-module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TestingModule } from './features/testing/testing-module';
 import BlogsModule from './features/blogs/blogs-module';
+import { Device } from './features/auth/devices/domain/device-entity';
+import { Blog } from './features/blogs/blogs/domain/blog-entity';
+import { Post } from './features/blogs/posts/domain/posts.entity';
+import { Like } from './features/blogs/likes/domain/likes.entity';
+import { User } from './features/users/domain/user-entity';
 
 @Global()
 @Module({
@@ -35,6 +40,10 @@ import BlogsModule from './features/blogs/blogs-module';
                     ? databaseSettings.POSTGRESQL_TEST_DB_NAME
                     : databaseSettings.POSTGRESQL_DB_NAME;
 
+                const isTesting = environmentSettings.isTesting;
+
+                const entitiesArray = [Device, Blog, Post, Like, User];
+
                 const dbPassword = databaseSettings.DB_PASSWORD;
 
                 return {
@@ -46,9 +55,10 @@ import BlogsModule from './features/blogs/blogs-module';
                     port: 5432,
                     // ssl: true,
                     // url: process.env.POSTGRESQL_CONNECTION_URI,
-                    autoLoadEntities: false, //false в продакшене и для raw_sql только
-                    synchronize: false, //false в продакшене и для raw_sql только
-                    // logging: true,
+                    entities: entitiesArray,
+                    autoLoadEntities: isTesting, //false в продакшене и для raw_sql только
+                    synchronize: isTesting, //false в продакшене и для raw_sql только
+                    logging: true,
                 };
             },
             inject: [ConfigService],

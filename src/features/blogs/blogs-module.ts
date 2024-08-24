@@ -1,15 +1,33 @@
-import { BlogsSaController } from './api/blogs-sa-controller';
 import { Module } from '@nestjs/common';
-import { BlogsService } from './application/blogs-service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Blog } from './domain/blog-entity';
-import { BlogsRepository } from './infrastructure/blogs-repository';
-import { BlogsQueryRepository } from './infrastructure/blogs-query-repository';
+import { CommandBus, CqrsModule } from '@nestjs/cqrs';
+import { Blog } from './blogs/domain/blog-entity';
+import { BlogsService } from './blogs/application/blogs-service';
+import { BlogsRepository } from './blogs/infrastructure/blogs-repository';
+import { BlogsQueryRepository } from './blogs/infrastructure/blogs-query-repository';
+import { GetBlogsQuery } from './blogs/infrastructure/queries/get-blogs-query';
+import { BlogsSaController } from './blogs/api/blogs-sa-controller';
+import { BlogsController } from './blogs/api/blogs-controller';
+import { PostsService } from './posts/application/posts.service';
+import { PostsRepository } from './posts/infrastructure/posts.repository';
+import { PostsQueryRepository } from './posts/infrastructure/posts-query.repository';
+import { Post } from './posts/domain/posts.entity';
+import { Like } from './likes/domain/likes.entity';
+import { GetPostsForBlogQuery } from './posts/infrastructure/queries/get-posts-for-blog.query';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Blog])],
-    controllers: [BlogsSaController],
-    providers: [BlogsService, BlogsRepository, BlogsQueryRepository],
+    imports: [TypeOrmModule.forFeature([Blog, Post, Like]), CqrsModule],
+    controllers: [BlogsSaController, BlogsController],
+    providers: [
+        BlogsService,
+        PostsService,
+        BlogsRepository,
+        PostsRepository,
+        BlogsQueryRepository,
+        PostsQueryRepository,
+        GetBlogsQuery,
+        GetPostsForBlogQuery,
+    ],
     exports: [BlogsService, BlogsQueryRepository],
 })
 export default class BlogsModule {}

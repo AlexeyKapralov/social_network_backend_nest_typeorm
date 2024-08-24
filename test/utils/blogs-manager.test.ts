@@ -2,9 +2,6 @@ import { HttpStatus, INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiSettings } from '../../src/settings/env/api-settings';
 import request from 'supertest';
-import { UserInputDto } from '../../src/features/users/api/dto/input/user-input-dto';
-import { Trim } from '../../src/common/decorators/transform/trim-decorator';
-import { IsEmail, IsString, Length, Matches } from 'class-validator';
 import { BlogInputDto } from '../../src/features/blogs/api/dto/input/blog-input-dto';
 
 export class BlogsManagerTest {
@@ -43,6 +40,10 @@ export class BlogsManagerTest {
                 name: blogInputBody.name,
                 description: blogInputBody.description,
                 websiteUrl: blogInputBody.websiteUrl,
+                isMembership: true,
+                createdAt: expect.stringMatching(
+                    /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
+                ),
             });
             return { blogId: blogResponse.body.id };
         }
