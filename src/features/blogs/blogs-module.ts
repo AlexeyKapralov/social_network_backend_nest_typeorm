@@ -14,10 +14,13 @@ import { PostsQueryRepository } from './posts/infrastructure/posts-query.reposit
 import { Post } from './posts/domain/posts.entity';
 import { Like } from './likes/domain/likes.entity';
 import { GetPostsForBlogQuery } from './posts/infrastructure/queries/get-posts-for-blog.query';
+import { PostsController } from './posts/api/posts.controller';
+import { GetPostsQuery } from './posts/infrastructure/queries/get-posts.query';
+import { GetOnePostQuery } from './posts/infrastructure/queries/get-one-post.query';
 
 @Module({
     imports: [TypeOrmModule.forFeature([Blog, Post, Like]), CqrsModule],
-    controllers: [BlogsSaController, BlogsController],
+    controllers: [BlogsSaController, BlogsController, PostsController],
     providers: [
         BlogsService,
         PostsService,
@@ -27,6 +30,8 @@ import { GetPostsForBlogQuery } from './posts/infrastructure/queries/get-posts-f
         PostsQueryRepository,
         GetBlogsQuery,
         GetPostsForBlogQuery,
+        GetPostsQuery,
+        GetOnePostQuery,
     ],
     exports: [BlogsService, BlogsQueryRepository],
 })

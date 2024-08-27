@@ -10,13 +10,13 @@ export class QueryDtoBase {
     @IsString()
     sortBy: string = 'createdAt';
     @Transform(({ value }: TransformFnParams) => {
-        switch (value) {
+        switch (value.toUpperCase()) {
             case SortDirection.ASC:
                 return SortDirection.ASC;
             case SortDirection.DESC:
                 return SortDirection.DESC;
             default:
-                'desc';
+                return 'DESC';
         }
     })
     sortDirection: SortDirection = SortDirection.DESC;
@@ -31,10 +31,19 @@ export class QueryDtoBase {
 }
 
 export class QueryDtoWithEmailLogin extends QueryDtoBase {
+    // @Transform(({ value }: TransformFnParams) => {
+    //     value.toUpperCase();
+    // })
     searchEmailTerm: string = null;
+    // @Transform(({ value }: TransformFnParams) => {
+    //     value.toUpperCase();
+    // })
     searchLoginTerm: string = null;
 }
 
 export class QueryDtoWithName extends QueryDtoBase {
+    // @Transform(({ value }: TransformFnParams) => {
+    //     value.toUpperCase();
+    // })
     searchNameTerm: string = null;
 }

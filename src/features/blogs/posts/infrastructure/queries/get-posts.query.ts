@@ -11,17 +11,16 @@ import { PostsViewDto } from '../../api/dto/output/extended-likes-info-view.dto'
 import { NotFoundException } from '@nestjs/common';
 import { BlogsQueryRepository } from '../../../blogs/infrastructure/blogs-query-repository';
 
-export class GetPostsForBlogPayload implements IQuery {
+export class GetPostsPayload implements IQuery {
     constructor(
         public query: QueryDtoBase,
-        public blogId: string,
         public userId: string = '00000000-0000-0000-0000-000000000000',
     ) {}
 }
 
-@QueryHandler(GetPostsForBlogPayload)
-export class GetPostsForBlogQuery
-    implements IQueryHandler<GetPostsForBlogPayload, GetPostsResultType>
+@QueryHandler(GetPostsPayload)
+export class GetPostsQuery
+    implements IQueryHandler<GetPostsPayload, GetPostsResultType>
 {
     constructor(
         @InjectRepository(Post) private postRepo: Repository<Post>,
@@ -29,19 +28,7 @@ export class GetPostsForBlogQuery
         private blogQueryRepository: BlogsQueryRepository,
     ) {}
 
-    async execute(
-        queryPayload: GetPostsForBlogPayload,
-    ): Promise<GetPostsResultType> {
-        let foundBlog;
-        try {
-            foundBlog = await this.blogQueryRepository.findBlog(
-                queryPayload.blogId,
-            );
-        } catch {}
-        if (!foundBlog) {
-            return null;
-        }
-
+    async execute(queryPayload: GetPostsPayload): Promise<GetPostsResultType> {
         const limit = queryPayload.query.pageSize;
         const offset =
             (queryPayload.query.pageNumber - 1) * queryPayload.query.pageSize;
@@ -50,7 +37,6 @@ export class GetPostsForBlogQuery
         countPosts = await this.postRepo
             .createQueryBuilder('p')
             .leftJoinAndSelect('p.blog', 'blog')
-            .where('blog.id = :blogId', { blogId: queryPayload.blogId })
             .getCount();
 
         const likesTop3 = this.dataSource
@@ -133,7 +119,6 @@ export class GetPostsForBlogQuery
                 `"${queryPayload.query.sortBy === 'createdAt' ? `p"."createdAt` : queryPayload.query.sortBy}"`,
                 queryPayload.query.sortDirection,
             )
-            .where('"blogId" = :blogId', { blogId: queryPayload.blogId })
             .setParameters(likesTop3.getParameters())
             .setParameters(userLike.getParameters())
             .setParameters(postsUnique.getParameters())

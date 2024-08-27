@@ -19,7 +19,7 @@ import { BasicAuthGuard } from '../../auth/auth/guards/basic-auth-guard';
 import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
 
 @Controller('sa/users')
-export class UsersController {
+export class UsersSaController {
     constructor(private userService: UsersService) {}
 
     //можно так, а можно создать отдельный guard, который implement этот AuthGuard: @UseGuards(BasicAuthGuard)

@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { BlogInputDto } from '../api/dto/input/blog-input-dto';
 import { BlogViewDto } from '../api/dto/output/blog-view-dto';
 import { BlogsRepository } from '../infrastructure/blogs-repository';
-import { InterlayerNotice } from '../../../../base/models/interlayer';
+import {
+    InterlayerNotice,
+    InterlayerStatuses,
+} from '../../../../base/models/interlayer';
 import { blogViewDtoMapper } from '../../../../base/mappers/blog-view-mapper';
 import { BlogPostInputDto } from '../api/dto/input/blog-post-input.dto';
 import { PostsRepository } from '../../posts/infrastructure/posts.repository';
 import { PostsQueryRepository } from '../../posts/infrastructure/posts-query.repository';
-import { Post } from '../../posts/domain/posts.entity';
 import { PostsViewDto } from '../../posts/api/dto/output/extended-likes-info-view.dto';
 import { LikeStatus } from '../../likes/api/dto/output/likes-view.dto';
 
@@ -65,7 +67,7 @@ export class BlogsService {
         blogPostInputDto: BlogPostInputDto,
     ): Promise<InterlayerNotice<PostsViewDto | null>> {
         const notice = new InterlayerNotice<PostsViewDto | null>();
-        // const notice = new InterlayerNotice<PostsViewDto | null>();
+
         const foundBlog = await this.blogsRepository.findBlog(blogId);
         if (!foundBlog) {
             notice.addError('blog was not found');
@@ -94,6 +96,60 @@ export class BlogsService {
         };
 
         notice.addData(mappedCreatedPost);
+        return notice;
+    }
+
+    async updatePostForBlog(
+        blogId: string,
+        blogPostInputDto: BlogPostInputDto,
+        postId: string,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const isPostBelongBlog =
+            await this.postsRepository.checkIsPostBelongBlog(blogId, postId);
+        if (!isPostBelongBlog) {
+            notice.addError(
+                'post is not belong blog',
+                'post',
+                InterlayerStatuses.FORBIDDEN,
+            );
+            return notice;
+        }
+
+        const isUpdatedPost = await this.postsRepository.updatePost(
+            postId,
+            blogPostInputDto,
+        );
+        if (!isUpdatedPost) {
+            notice.addError('post was not updated');
+            return notice;
+        }
+        return notice;
+    }
+
+    async deletePostForBlog(
+        blogId: string,
+        postId: string,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const isPostBelongBlog =
+            await this.postsRepository.checkIsPostBelongBlog(blogId, postId);
+        if (!isPostBelongBlog) {
+            notice.addError(
+                'post is not belong blog',
+                'post',
+                InterlayerStatuses.FORBIDDEN,
+            );
+            return notice;
+        }
+
+        const isDeletedPost = await this.postsRepository.deletePost(postId);
+        if (!isDeletedPost) {
+            notice.addError('post was not deleted');
+            return notice;
+        }
         return notice;
     }
 }

@@ -12,12 +12,8 @@ import {
     Post,
     Put,
     Query,
-    Req,
-    Res,
-    UnauthorizedException,
     UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { BlogPostInputDto } from './dto/input/blog-post-input.dto';
 import { BlogsService } from '../application/blogs-service';
 import { BlogsQueryRepository } from '../infrastructure/blogs-query-repository';
@@ -32,14 +28,9 @@ import { BlogViewDto } from './dto/output/blog-view-dto';
 import { QueryBus } from '@nestjs/cqrs';
 import { BasicAuthGuard } from '../../../auth/auth/guards/basic-auth-guard';
 import { BlogInputDto } from './dto/input/blog-input-dto';
-import { PostsViewDto } from '../../posts/api/dto/output/extended-likes-info-view.dto';
 import {
-    RefreshTokensCommand,
-    RefreshTokensUseCaseResultType,
-} from '../../../auth/auth/application/usecases/refresh-tokens-usecase';
-import {
+    GetPostsResultType,
     GetPostsForBlogPayload,
-    GetPostsForBlogQuery,
 } from '../../posts/infrastructure/queries/get-posts-for-blog.query';
 
 @Controller('sa/blogs')
@@ -122,61 +113,53 @@ export class BlogsSaController {
 
     @UseGuards(BasicAuthGuard)
     @Get(':blogId/posts')
+    @HttpCode(HttpStatus.OK)
     async getPostsForBlog(
-        @Param('blogId') blogId: string,
+        @Param('blogId', ParseUUIDPipe) blogId: string,
         @Query() query: QueryDtoBase,
     ) {
-        let foundBlog;
-        try {
-            foundBlog = await this.blogQueryRepository.findBlog(blogId);
-        } catch {}
-        if (!foundBlog) {
+        const queryPayload = new GetPostsForBlogPayload(query, blogId);
+        const posts = await this.queryBus.execute<
+            GetPostsForBlogPayload,
+            GetPostsResultType
+        >(queryPayload);
+        if (!posts) {
             throw new NotFoundException();
         }
-
-        const queryPayload = new GetPostsForBlogPayload(query, blogId);
-        const postsInterlayer = await this.queryBus.execute<
-            GetPostsForBlogPayload,
-            InterlayerNotice<number>
-        >(queryPayload);
-        if (postsInterlayer.hasError()) {
-            throw new UnauthorizedException();
-        }
-        return postsInterlayer.data;
+        return posts;
     }
-    //
-    // @UseGuards(AuthGuard('basic'))
-    // @Put(':blogId/posts/:postId')
-    // @HttpCode(HttpStatus.NO_CONTENT)
-    // async updatePostForBlog(
-    //     @Param('blogId', IsBlogExistPipe) blogId: string,
-    //     @Param('postId', IsPostExistPipe) postId: string,
-    //     @Body() blogPostInputDto: BlogPostInputDto,
-    // ) {
-    //     const isUpdatedInterLayer = await this.blogsService.updatePostForBlog(
-    //         blogId,
-    //         blogPostInputDto,
-    //         postId,
-    //     );
-    //     if (isUpdatedInterLayer.hasError()) {
-    //         throw new NotFoundException();
-    //     }
-    // }
-    //
-    // @UseGuards(AuthGuard('basic'))
-    // @Delete(':blogId/posts/:postId')
-    // @HttpCode(HttpStatus.NO_CONTENT)
-    // async deletePostForBlog(
-    //     @Param('blogId', IsBlogExistPipe) blogId: string,
-    //     @Param('postId', IsPostExistPipe) postId: string,
-    //     @Res({ passthrough: true }) res: Response,
-    // ) {
-    //     const isDeletedInterLayer = await this.blogsService.deletePostForBlog(
-    //         blogId,
-    //         postId,
-    //     );
-    //     if (isDeletedInterLayer.hasError()) {
-    //         throw new NotFoundException();
-    //     }
-    // }
+
+    @UseGuards(BasicAuthGuard)
+    @Put(':blogId/posts/:postId')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async updatePostForBlog(
+        @Param('blogId', ParseUUIDPipe) blogId: string,
+        @Param('postId', ParseUUIDPipe) postId: string,
+        @Body() blogPostInputDto: BlogPostInputDto,
+    ) {
+        const isUpdatedInterLayer = await this.blogsService.updatePostForBlog(
+            blogId,
+            blogPostInputDto,
+            postId,
+        );
+        if (isUpdatedInterLayer.hasError()) {
+            throw new NotFoundException();
+        }
+    }
+
+    @UseGuards(BasicAuthGuard)
+    @Delete(':blogId/posts/:postId')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async deletePostForBlog(
+        @Param('blogId', ParseUUIDPipe) blogId: string,
+        @Param('postId', ParseUUIDPipe) postId: string,
+    ) {
+        const isDeletedInterLayer = await this.blogsService.deletePostForBlog(
+            blogId,
+            postId,
+        );
+        if (isDeletedInterLayer.hasError()) {
+            throw new NotFoundException();
+        }
+    }
 }

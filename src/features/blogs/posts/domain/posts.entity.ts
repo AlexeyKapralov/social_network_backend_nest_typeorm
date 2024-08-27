@@ -17,13 +17,13 @@ export class Post extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column()
+    @Column({ collation: 'C' })
     title: string;
 
-    @Column()
+    @Column({ collation: 'C' })
     shortDescription: string;
 
-    @Column()
+    @Column({ collation: 'C' })
     content: string;
 
     @Column()

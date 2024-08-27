@@ -14,44 +14,27 @@ export class PostsRepository {
         @InjectRepository(Post) private postRepo: Repository<Post>,
     ) {}
 
-    // async checkIsPostBelongBlog(
-    //     blogId: string,
-    //     postId: string,
-    // ): Promise<boolean> {
-    //     const post = await this.findPost(postId);
-    //     if (!post) {
-    //         return false;
-    //     }
-    //     return post.blogId === blogId;
-    // }
-    //
-    // async findPost(postId: string): Promise<PostDocumentSql> {
-    //     try {
-    //         const post = await this.dataSource.query(
-    //             `
-    //             SELECT
-    //                 p.title,
-    //                 p."shortDescription",
-    //                 p.content,
-    //                 p."blogId",
-    //                 b."name" AS "blogName",
-    //                 p."createdAt",
-    //                 p."likesCount",
-    //                 p."dislikesCount",
-    //                 p."isDeleted"
-    //             FROM public.posts p
-    //             LEFT JOIN public.blogs b ON b.id = p."blogId"
-    //             WHERE
-    //                 p."isDeleted" = False AND p.id = $1
-    //         `,
-    //             [postId],
-    //         );
-    //         return post[0];
-    //     } catch (e) {
-    //         console.log('post repo.find post error: ', e);
-    //         return null;
-    //     }
-    // }
+    async checkIsPostBelongBlog(
+        blogId: string,
+        postId: string,
+    ): Promise<boolean> {
+        const post = await this.findPost(postId);
+        if (!post) {
+            return false;
+        }
+        return post.blog.id === blogId;
+    }
+
+    async findPost(postId: string): Promise<Post> {
+        return await this.postRepo.findOne({
+            where: {
+                id: postId,
+            },
+            relations: {
+                blog: true,
+            },
+        });
+    }
 
     async createPost(
         blogPostInputDto: BlogPostInputDto,
@@ -60,32 +43,22 @@ export class PostsRepository {
         return await Post.createPost(blogPostInputDto, blog);
     }
 
-    // async updatePost(postId: string, postUpdateData: PostInputDto) {
-    //     try {
-    //         const isUpdate = await this.dataSource.query(
-    //             `
-    //             UPDATE public.posts
-    //             SET
-    //                 "title" = $2,
-    //                 "shortDescription" = $3,
-    //                 "content" = $4,
-    //                 "blogId" = $5
-    //             WHERE "id" = $1 AND "isDeleted" = False;
-    //         `,
-    //             [
-    //                 postId,
-    //                 postUpdateData.title,
-    //                 postUpdateData.shortDescription,
-    //                 postUpdateData.content,
-    //                 postUpdateData.blogId,
-    //             ],
-    //         );
-    //         return isUpdate[1] === 1;
-    //     } catch (e) {
-    //         console.log('post repo.updatePost error: ', e);
-    //         return null;
-    //     }
-    // }
+    async updatePost(
+        postId: string,
+        blogPostInputDto: BlogPostInputDto,
+    ): Promise<boolean> {
+        const isUpdatePost = await this.postRepo.update(
+            {
+                id: postId,
+            },
+            {
+                title: blogPostInputDto.title,
+                content: blogPostInputDto.content,
+                shortDescription: blogPostInputDto.shortDescription,
+            },
+        );
+        return isUpdatePost.affected === 1;
+    }
 
     // async updatePostForBlog(postId: string, postUpdateData: BlogPostInputDto) {
     //     try {
@@ -112,22 +85,14 @@ export class PostsRepository {
     //     }
     // }
     //
-    // async deletePost(postId: string) {
-    //     try {
-    //         const isDeletePost = await this.dataSource.query(
-    //             `
-    //             UPDATE public.posts
-    //             SET "isDeleted" = True
-    //             WHERE "id" = $1 AND "isDeleted" = False;
-    //         `,
-    //             [postId],
-    //         );
-    //         return isDeletePost[1] === 1;
-    //     } catch (e) {
-    //         console.log('post repo.deletePost error: ', e);
-    //         return null;
-    //     }
-    // }
+    async deletePost(postId: string) {
+        const post = await this.findPost(postId);
+        if (!post) {
+            return false;
+        }
+        await post.softRemove();
+        return true;
+    }
     //
     // async changeLikesAndDislikesCount(
     //     postId: string,

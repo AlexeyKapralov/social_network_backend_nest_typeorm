@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { UsersController } from './api/users-controller';
+import { UsersSaController } from './api/users-sa-controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './domain/user-entity';
 import { UsersService } from './application/users-service';
@@ -9,7 +9,7 @@ import { CryptoService } from '../../base/services/crypto-service';
 
 @Module({
     imports: [TypeOrmModule.forFeature([User])],
-    controllers: [UsersController],
+    controllers: [UsersSaController],
     providers: [
         UsersService,
         UsersRepository,

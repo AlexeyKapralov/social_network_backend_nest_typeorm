@@ -2,7 +2,7 @@ import { IQuery, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { BlogViewDto } from '../../api/dto/output/blog-view-dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Blog } from '../../domain/blog-entity';
-import { Like, Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { InterlayerNotice } from '../../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../../common/dto/paginator-dto';
 import { QueryDtoWithName } from '../../../../../common/dto/query-dto';
@@ -34,13 +34,13 @@ export class GetBlogsQuery
         let countBlogs = 0;
         countBlogs = await this.blogRepo.count({
             where: {
-                name: Like(queryPayload.query.searchNameTerm),
+                name: ILike(queryPayload.query.searchNameTerm),
             },
         });
 
         const blogs = await this.blogRepo.find({
             where: {
-                name: Like(queryPayload.query.searchNameTerm),
+                name: ILike(queryPayload.query.searchNameTerm),
             },
             order: {
                 [queryPayload.query.sortBy]: queryPayload.query.sortDirection,

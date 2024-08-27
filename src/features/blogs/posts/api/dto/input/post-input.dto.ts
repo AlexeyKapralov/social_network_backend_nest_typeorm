@@ -11,8 +11,8 @@ export class PostInputDto {
     @Trim()
     @Length(1, 1000)
     content: string;
-    @IsUUID()
     @Trim()
+    @IsUUID()
     @Length(1)
     blogId: string;
 }

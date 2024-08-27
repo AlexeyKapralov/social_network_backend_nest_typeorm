@@ -12,13 +12,13 @@ export class Blog extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column()
+    @Column({ collation: 'C' })
     name: string;
 
-    @Column()
+    @Column({ collation: 'C' })
     description: string;
 
-    @Column()
+    @Column({ collation: 'C' })
     websiteUrl: string;
 
     @Column()
@@ -36,7 +36,7 @@ export class Blog extends BaseEntity {
         blog.description = blogInputDto.description;
         blog.websiteUrl = blogInputDto.websiteUrl;
         blog.createdAt = new Date();
-        blog.isMembership = true;
+        blog.isMembership = false;
 
         await blog.save();
 

@@ -11,7 +11,7 @@ import { HttpStatus } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UsersManagerTest } from '../utils/users-manager.test';
 
-aDescribe(skipSettings.for('usersTests'))('UsersController (e2e)', () => {
+aDescribe(skipSettings.for('usersTests'))('UsersSaController (e2e)', () => {
     let app: NestExpressApplication;
     let dataSource: DataSource;
     let usersManagerTest: UsersManagerTest;
