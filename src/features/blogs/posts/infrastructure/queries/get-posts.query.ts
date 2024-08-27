@@ -49,10 +49,10 @@ export class GetPostsQuery
             .orderBy(`"like"."createdAt"`, 'DESC')
             .limit(3)
             .select([
-                'like.createdAt AS "likesCreatedAt"',
+                'like.createdAt AS "addedAt"',
                 'like.parentId AS "likesParentId"',
-                'u.id AS "likesUserId"',
-                'u.login AS "likesUserLogin"',
+                'u.id AS "userId"',
+                'u.login AS "login"',
             ]);
 
         const userLike = this.dataSource
@@ -80,7 +80,6 @@ export class GetPostsQuery
                 'p."createdAt" AS "createdAt"',
                 'blog.id AS "blogId"',
                 'blog."name" AS "blogName"',
-                'blog."createdAt" AS "blogCreatedAt"',
             ])
             .orderBy(
                 `"${queryPayload.query.sortBy === 'createdAt' ? `p"."createdAt` : queryPayload.query.sortBy}"`,
@@ -109,63 +108,74 @@ export class GetPostsQuery
                 'p."createdAt" AS "createdAt"',
                 'p."blogId" AS "blogId"',
                 'p."blogName" AS "blogName"',
-                'p."blogCreatedAt" AS "blogCreatedAt"',
                 'p."likesCount" AS "likesCount"',
                 'p."dislikesCount" AS "dislikesCount"',
                 'ul."likeStatus" AS "myStatus"',
-                'l.*',
+                `JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'addedAt', l."addedAt", 
+                        'userId', l."userId", 
+                        'login', l."login"
+                    )) AS "newestLikes"`,
             ])
             .orderBy(
                 `"${queryPayload.query.sortBy === 'createdAt' ? `p"."createdAt` : queryPayload.query.sortBy}"`,
                 queryPayload.query.sortDirection,
             )
+            .groupBy('p.id')
+            .addGroupBy('p.title')
+            .addGroupBy('p.id')
+            .addGroupBy('p.title')
+            .addGroupBy('p."shortDescription"')
+            .addGroupBy('p.content')
+            .addGroupBy('p."createdAt"')
+            .addGroupBy('p."blogId"')
+            .addGroupBy('p."blogName"')
+            .addGroupBy('p."likesCount"')
+            .addGroupBy('p."dislikesCount"')
+            .addGroupBy('ul."likeStatus"')
             .setParameters(likesTop3.getParameters())
             .setParameters(userLike.getParameters())
             .setParameters(postsUnique.getParameters())
             .getRawMany();
 
-        const uniquePostsSet = new Set();
-        postsSourceWithNewestLikes.forEach((el) => {
-            uniquePostsSet.add(el.id);
-        });
-        const uniquePosts = Array.from(uniquePostsSet);
+        // return postsSourceWithNewestLikes as any;
 
+        // const uniquePostsSet = new Set();
+        // postsSourceWithNewestLikes.forEach((el) => {
+        //     uniquePostsSet.add(el.id);
+        // });
+        // const uniquePosts = Array.from(uniquePostsSet);
+        //
         const posts: PostsViewDto[] = [];
-        uniquePosts.forEach((postId) => {
+        postsSourceWithNewestLikes.forEach((post) => {
             let likes = [];
-            const postSource = postsSourceWithNewestLikes.filter(
-                (p) => p.id === postId,
-            );
 
-            postSource.map((p) => {
-                if (
-                    !!p.likesUserId &&
-                    !!p.likesUserLogin &&
-                    !!p.likesCreatedAt
-                ) {
+            post.newestLikes.map((p) => {
+                if (!!p.addedAt && !!p.userId && !!p.login) {
                     likes.push({
-                        addedAt: p.likesCreatedAt,
-                        userId: p.likesUserId,
-                        login: p.likesUserLogin,
+                        addedAt: p.addedAt,
+                        userId: p.userId,
+                        login: p.login,
                     });
                 }
             });
 
             const fullPost: PostsViewDto = {
-                id: postSource[0].id,
-                blogId: postSource[0].blogId,
-                blogName: postSource[0].blogName,
-                content: postSource[0].content,
-                createdAt: postSource[0].createdAt,
-                title: postSource[0].title,
-                shortDescription: postSource[0].shortDescription,
+                id: post.id,
+                blogId: post.blogId,
+                blogName: post.blogName,
+                content: post.content,
+                createdAt: post.createdAt,
+                title: post.title,
+                shortDescription: post.shortDescription,
                 extendedLikesInfo: {
                     myStatus:
-                        postSource[0].myStatus === null
+                        post.myStatus === null
                             ? LikeStatus.None
-                            : (postSource[0].myStatus as LikeStatus),
-                    likesCount: postSource[0].likesCount,
-                    dislikesCount: postSource[0].dislikesCount,
+                            : (post.myStatus as LikeStatus),
+                    likesCount: post.likesCount,
+                    dislikesCount: post.dislikesCount,
                     newestLikes: likes,
                 },
             };
