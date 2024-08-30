@@ -25,21 +25,39 @@ export class GetOnePostQuery
     async execute(
         queryPayload: GetOnePostPayload,
     ): Promise<GetOnePostResultType | null> {
-        const likesTop3 = this.dataSource
+        const likes = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('like')
             .leftJoinAndSelect('like.user', 'u')
             .where('"like"."likeStatus" = :likeStatus', {
                 likeStatus: LikeStatus.Like,
             })
-            .orderBy(`"like"."createdAt"`, 'DESC')
-            .limit(3)
             .select([
-                'like.createdAt AS "likesCreatedAt"',
+                'like.createdAt AS "addedAt"',
                 'like.parentId AS "likesParentId"',
-                'u.id AS "likesUserId"',
-                'u.login AS "likesUserLogin"',
-            ]);
+                'u.id AS "userId"',
+                'u.login AS "login"',
+            ])
+            .addSelect(
+                'ROW_NUMBER() OVER (PARTITION BY "like"."parentId" ORDER BY "like"."createdAt" DESC) AS "rowNum"',
+            );
+
+        const likesTop3 = this.dataSource
+            .createQueryBuilder()
+            .from('(' + likes.getQuery() + ')', 'l')
+            .select([
+                '"l"."likesParentId" AS "likesParentId"',
+                `
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'addedAt', l."addedAt",
+                        'userId', l."userId",
+                        'login', l."login"
+                    )
+                ) AS "newestLikes"`,
+            ])
+            .groupBy('"l"."likesParentId"')
+            .where('l."rowNum"<= 3');
 
         const userLike = this.dataSource
             .getRepository(Like)
@@ -74,53 +92,53 @@ export class GetOnePostQuery
                 'p."createdAt" AS "createdAt"',
                 'blog."id" AS "blogId"',
                 'blog."name" AS "blogName"',
-                'blog."createdAt" AS "blogCreatedAt"',
                 'p."likesCount" AS "likesCount"',
                 'p."dislikesCount" AS "dislikesCount"',
                 'ul."likeStatus" AS "myStatus"',
-                'l.*',
+                `l."newestLikes"`,
             ])
             .setParameters(likesTop3.getParameters())
+            .setParameters(likes.getParameters())
             .setParameters(userLike.getParameters())
-            .getRawMany();
+            .getRawOne();
 
-        if (postWithNewestLikes.length === 0) {
+        if (!postWithNewestLikes) {
             return null;
         }
 
-        let post: PostsViewDto;
-        let likes = [];
+        let likesNew = [];
+        if (postWithNewestLikes.newestLikes) {
+            postWithNewestLikes.newestLikes.map((p) => {
+                if (!!p.addedAt && !!p.userId && !!p.login) {
+                    likesNew.push({
+                        addedAt: p.addedAt,
+                        userId: p.userId,
+                        login: p.login,
+                    });
+                }
+            });
+        }
 
-        postWithNewestLikes.map((p) => {
-            if (!!p.likesUserId && !!p.likesUserLogin && !!p.likesCreatedAt) {
-                likes.push({
-                    addedAt: p.likesCreatedAt,
-                    userId: p.likesUserId,
-                    login: p.likesUserLogin,
-                });
-            }
-        });
-
-        post = {
-            id: postWithNewestLikes[0].id,
-            blogId: postWithNewestLikes[0].blogId,
-            blogName: postWithNewestLikes[0].blogName,
-            content: postWithNewestLikes[0].content,
-            createdAt: postWithNewestLikes[0].createdAt,
-            title: postWithNewestLikes[0].title,
-            shortDescription: postWithNewestLikes[0].shortDescription,
+        const fullPost: PostsViewDto = {
+            id: postWithNewestLikes.id,
+            blogId: postWithNewestLikes.blogId,
+            blogName: postWithNewestLikes.blogName,
+            content: postWithNewestLikes.content,
+            createdAt: postWithNewestLikes.createdAt,
+            title: postWithNewestLikes.title,
+            shortDescription: postWithNewestLikes.shortDescription,
             extendedLikesInfo: {
                 myStatus:
-                    postWithNewestLikes[0].myStatus === null
+                    postWithNewestLikes.myStatus === null
                         ? LikeStatus.None
-                        : (postWithNewestLikes[0].myStatus as LikeStatus),
-                likesCount: postWithNewestLikes[0].likesCount,
-                dislikesCount: postWithNewestLikes[0].dislikesCount,
-                newestLikes: likes,
+                        : (postWithNewestLikes.myStatus as LikeStatus),
+                likesCount: postWithNewestLikes.likesCount,
+                dislikesCount: postWithNewestLikes.dislikesCount,
+                newestLikes: likesNew,
             },
         };
 
-        return post;
+        return fullPost;
     }
 }
 

@@ -1,14 +1,12 @@
 import { IQuery, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { InterlayerNotice } from '../../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../../common/dto/paginator-dto';
 import { QueryDtoBase } from '../../../../../common/dto/query-dto';
 import { Post } from '../../domain/posts.entity';
 import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
 import { PostsViewDto } from '../../api/dto/output/extended-likes-info-view.dto';
-import { NotFoundException } from '@nestjs/common';
 import { BlogsQueryRepository } from '../../../blogs/infrastructure/blogs-query-repository';
 
 export class GetPostsPayload implements IQuery {
@@ -39,21 +37,39 @@ export class GetPostsQuery
             .leftJoinAndSelect('p.blog', 'blog')
             .getCount();
 
-        const likesTop3 = this.dataSource
+        const likes = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('like')
             .leftJoinAndSelect('like.user', 'u')
             .where('"like"."likeStatus" = :likeStatus', {
                 likeStatus: LikeStatus.Like,
             })
-            .orderBy(`"like"."createdAt"`, 'DESC')
-            .limit(3)
             .select([
                 'like.createdAt AS "addedAt"',
                 'like.parentId AS "likesParentId"',
                 'u.id AS "userId"',
                 'u.login AS "login"',
-            ]);
+            ])
+            .addSelect(
+                'ROW_NUMBER() OVER (PARTITION BY "like"."parentId" ORDER BY "like"."createdAt" DESC) AS "rowNum"',
+            );
+
+        const likesTop3 = this.dataSource
+            .createQueryBuilder()
+            .from('(' + likes.getQuery() + ')', 'l')
+            .select([
+                '"l"."likesParentId" AS "likesParentId"',
+                `
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'addedAt', l."addedAt",
+                        'userId', l."userId",
+                        'login', l."login"
+                    )
+                ) AS "newestLikes"`,
+            ])
+            .groupBy('"l"."likesParentId"')
+            .where('l."rowNum"<= 3');
 
         const userLike = this.dataSource
             .getRepository(Like)
@@ -63,7 +79,7 @@ export class GetPostsQuery
             })
             .select([
                 'userlike."likeStatus" AS "likeStatus"',
-                'userlike.parentId',
+                'userlike."parentId"',
             ]);
 
         const postsUnique = this.postRepo
@@ -93,12 +109,12 @@ export class GetPostsQuery
             .leftJoinAndSelect(
                 '(' + userLike.getQuery() + ')',
                 'ul',
-                '"ul"."parentId" = p.id',
+                '"ul"."parentId" = "p"."id"',
             )
             .leftJoinAndSelect(
                 '(' + likesTop3.getQuery() + ')',
                 'l',
-                '"l"."likesParentId" = p.id',
+                '"l"."likesParentId" = "p"."id"',
             )
             .select([
                 'p.id AS id',
@@ -111,55 +127,33 @@ export class GetPostsQuery
                 'p."likesCount" AS "likesCount"',
                 'p."dislikesCount" AS "dislikesCount"',
                 'ul."likeStatus" AS "myStatus"',
-                `JSON_AGG(
-                    JSON_BUILD_OBJECT(
-                        'addedAt', l."addedAt", 
-                        'userId', l."userId", 
-                        'login', l."login"
-                    )) AS "newestLikes"`,
+                'l."newestLikes"',
             ])
             .orderBy(
                 `"${queryPayload.query.sortBy === 'createdAt' ? `p"."createdAt` : queryPayload.query.sortBy}"`,
                 queryPayload.query.sortDirection,
             )
-            .groupBy('p.id')
-            .addGroupBy('p.title')
-            .addGroupBy('p.id')
-            .addGroupBy('p.title')
-            .addGroupBy('p."shortDescription"')
-            .addGroupBy('p.content')
-            .addGroupBy('p."createdAt"')
-            .addGroupBy('p."blogId"')
-            .addGroupBy('p."blogName"')
-            .addGroupBy('p."likesCount"')
-            .addGroupBy('p."dislikesCount"')
-            .addGroupBy('ul."likeStatus"')
             .setParameters(likesTop3.getParameters())
+            .setParameters(likes.getParameters())
             .setParameters(userLike.getParameters())
             .setParameters(postsUnique.getParameters())
             .getRawMany();
 
-        // return postsSourceWithNewestLikes as any;
-
-        // const uniquePostsSet = new Set();
-        // postsSourceWithNewestLikes.forEach((el) => {
-        //     uniquePostsSet.add(el.id);
-        // });
-        // const uniquePosts = Array.from(uniquePostsSet);
-        //
         const posts: PostsViewDto[] = [];
         postsSourceWithNewestLikes.forEach((post) => {
             let likes = [];
 
-            post.newestLikes.map((p) => {
-                if (!!p.addedAt && !!p.userId && !!p.login) {
-                    likes.push({
-                        addedAt: p.addedAt,
-                        userId: p.userId,
-                        login: p.login,
-                    });
-                }
-            });
+            if (post.newestLikes) {
+                post.newestLikes.map((p) => {
+                    if (!!p.addedAt && !!p.userId && !!p.login) {
+                        likes.push({
+                            addedAt: p.addedAt,
+                            userId: p.userId,
+                            login: p.login,
+                        });
+                    }
+                });
+            }
 
             const fullPost: PostsViewDto = {
                 id: post.id,

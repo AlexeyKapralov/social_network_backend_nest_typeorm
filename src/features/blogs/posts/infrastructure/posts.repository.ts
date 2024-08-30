@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { Post } from '../domain/posts.entity';
-import { PostInputDto } from '../api/dto/input/post-input.dto';
-import { LikeStatus } from '../../likes/api/dto/output/likes-view.dto';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { BlogPostInputDto } from '../../blogs/api/dto/input/blog-post-input.dto';
@@ -93,65 +91,22 @@ export class PostsRepository {
         await post.softRemove();
         return true;
     }
-    //
-    // async changeLikesAndDislikesCount(
-    //     postId: string,
-    //     oldLikeStatus: LikeStatus,
-    //     newLikeStatus: LikeStatus,
-    // ) {
-    //     const post = await this.findPost(postId);
-    //
-    //     let likesAction = 0;
-    //     let dislikesAction = 0;
-    //     switch (true) {
-    //         case newLikeStatus === LikeStatus.Like &&
-    //             oldLikeStatus === LikeStatus.Dislike:
-    //             likesAction = 1;
-    //             dislikesAction = -1;
-    //             break;
-    //         case newLikeStatus === LikeStatus.Like &&
-    //             oldLikeStatus === LikeStatus.None:
-    //             likesAction = 1;
-    //             // post.addCountDislikes(0)
-    //             break;
-    //         case newLikeStatus === LikeStatus.Dislike &&
-    //             oldLikeStatus === LikeStatus.Like:
-    //             likesAction = -1;
-    //             dislikesAction = 1;
-    //             break;
-    //         case newLikeStatus === LikeStatus.Dislike &&
-    //             oldLikeStatus === LikeStatus.None:
-    //             dislikesAction = 1;
-    //             break;
-    //         case newLikeStatus === LikeStatus.None &&
-    //             oldLikeStatus === LikeStatus.Like:
-    //             likesAction = -1;
-    //             break;
-    //         case newLikeStatus === LikeStatus.None &&
-    //             oldLikeStatus === LikeStatus.Dislike:
-    //             dislikesAction = -1;
-    //             break;
-    //         default:
-    //             break;
-    //     }
-    //
-    //     try {
-    //         const isChangeCountLikesAndDislikesForPost =
-    //             await this.dataSource.query(
-    //                 `
-    //             UPDATE public.posts
-    //             SET "likesCount" = CAST("likesCount" AS INT) + $2, "dislikesCount" = CAST("dislikesCount" AS INT) + $3
-    //             WHERE "id" = $1 AND "isDeleted" = False;
-    //         `,
-    //                 [postId, likesAction, dislikesAction],
-    //             );
-    //         return isChangeCountLikesAndDislikesForPost[1] === 1;
-    //     } catch (e) {
-    //         console.log(
-    //             'post repo.ChangeCountLikesAndDislikesCount error: ',
-    //             e,
-    //         );
-    //         return null;
-    //     }
-    // }
+
+    async changeLikesAndDislikesCount(
+        postId: string,
+        likesCount: number,
+        dislikesCount: number,
+    ): Promise<boolean> {
+        const post = await this.findPost(postId);
+
+        try {
+            post.addCountLikes(likesCount);
+            post.addCountDislikes(dislikesCount);
+            await this.postRepo.save(post);
+        } catch (e) {
+            console.log('post dislikes and likes were not updated: ' + e);
+            return false;
+        }
+        return true;
+    }
 }

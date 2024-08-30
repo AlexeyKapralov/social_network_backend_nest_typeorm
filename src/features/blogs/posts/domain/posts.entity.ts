@@ -60,4 +60,11 @@ export class Post extends BaseEntity {
 
         return post;
     }
+    addCountLikes(count: number) {
+        this.likesCount += count;
+    }
+
+    addCountDislikes(count: number) {
+        this.dislikesCount += count;
+    }
 }

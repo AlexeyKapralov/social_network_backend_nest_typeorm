@@ -5,8 +5,6 @@ import {
     Param,
     Query,
     Req,
-    Res,
-    UnauthorizedException,
     UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,8 +16,6 @@ import { GetBlogsPayload } from '../infrastructure/queries/get-blogs-query';
 import { InterlayerNotice } from '../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../common/dto/paginator-dto';
 import { BlogViewDto } from './dto/output/blog-view-dto';
-import { JwtAuthGuard } from '../../../auth/auth/guards/jwt-auth-guard';
-import { AccessTokenPayloadDto } from '../../../../common/dto/access-token-payload-dto';
 import { BlogsQueryRepository } from '../infrastructure/blogs-query-repository';
 import {
     GetPostsForBlogPayload,
@@ -53,9 +49,9 @@ export class BlogsController {
         @Query() query: QueryDtoBase,
     ) {
         let userId: string;
-        if (req.user.payload) {
-            if (req.user.payload.userId) {
-                userId = req.user.payload.userId;
+        if (req.user) {
+            if (req.user.userId) {
+                userId = req.user.userId;
             }
         }
 

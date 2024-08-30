@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, LessThan, MoreThan } from 'typeorm';
+import { DataSource, MoreThan } from 'typeorm';
 import { UserInputDto } from '../api/dto/input/user-input-dto';
 import { User } from '../domain/user-entity';
 import { v4 as uuid } from 'uuid';
@@ -34,6 +34,15 @@ export class UsersRepository {
         user.isConfirmed = isConfirmed;
 
         return await userRepository.save(user);
+    }
+
+    async findUser(userId: string): Promise<User> {
+        return await this.dataSource.getRepository(User).findOne({
+            where: {
+                id: userId,
+                isConfirmed: true,
+            },
+        });
     }
 
     async deleteUser(userId: string): Promise<boolean> {

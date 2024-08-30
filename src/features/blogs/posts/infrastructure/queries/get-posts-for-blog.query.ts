@@ -1,14 +1,12 @@
 import { IQuery, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { InterlayerNotice } from '../../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../../common/dto/paginator-dto';
 import { QueryDtoBase } from '../../../../../common/dto/query-dto';
 import { Post } from '../../domain/posts.entity';
 import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
 import { PostsViewDto } from '../../api/dto/output/extended-likes-info-view.dto';
-import { NotFoundException } from '@nestjs/common';
 import { BlogsQueryRepository } from '../../../blogs/infrastructure/blogs-query-repository';
 
 export class GetPostsForBlogPayload implements IQuery {
@@ -53,21 +51,38 @@ export class GetPostsForBlogQuery
             .where('blog.id = :blogId', { blogId: queryPayload.blogId })
             .getCount();
 
-        const likesTop3 = this.dataSource
+        const likes = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('like')
             .leftJoinAndSelect('like.user', 'u')
             .where('"like"."likeStatus" = :likeStatus', {
                 likeStatus: LikeStatus.Like,
             })
-            .orderBy(`"like"."createdAt"`, 'DESC')
-            .limit(3)
             .select([
-                'like.createdAt AS "likesCreatedAt"',
+                'like.createdAt AS "addedAt"',
                 'like.parentId AS "likesParentId"',
-                'u.id AS "likesUserId"',
-                'u.login AS "likesUserLogin"',
-            ]);
+                'u.id AS "userId"',
+                'u.login AS "login"',
+            ])
+            .addSelect(
+                'ROW_NUMBER() OVER (PARTITION BY "like"."parentId" ORDER BY "like"."createdAt" DESC) AS "rowNum"',
+            );
+
+        const likesTop3 = this.dataSource
+            .createQueryBuilder()
+            .from('(' + likes.getQuery() + ')', 'l')
+            .select([
+                '"l"."likesParentId" AS "likesParentId"',
+                `JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'addedAt', l."addedAt",
+                        'userId', l."userId",
+                        'login', l."login"
+                    )
+                ) AS "newestLikes"`,
+            ])
+            .groupBy('"l"."likesParentId"')
+            .where('l."rowNum"<= 3');
 
         const userLike = this.dataSource
             .getRepository(Like)
@@ -123,64 +138,52 @@ export class GetPostsForBlogQuery
                 'p."createdAt" AS "createdAt"',
                 'p."blogId" AS "blogId"',
                 'p."blogName" AS "blogName"',
-                'p."blogCreatedAt" AS "blogCreatedAt"',
                 'p."likesCount" AS "likesCount"',
                 'p."dislikesCount" AS "dislikesCount"',
                 'ul."likeStatus" AS "myStatus"',
-                'l.*',
+                `l."newestLikes"`,
             ])
             .orderBy(
                 `"${queryPayload.query.sortBy === 'createdAt' ? `p"."createdAt` : queryPayload.query.sortBy}"`,
                 queryPayload.query.sortDirection,
             )
-            .where('"blogId" = :blogId', { blogId: queryPayload.blogId })
-            .setParameters(likesTop3.getParameters())
+            .where('p."blogId" = :blogId', { blogId: queryPayload.blogId })
             .setParameters(userLike.getParameters())
+            .setParameters(likes.getParameters())
             .setParameters(postsUnique.getParameters())
             .getRawMany();
 
-        const uniquePostsSet = new Set();
-        postsSourceWithNewestLikes.forEach((el) => {
-            uniquePostsSet.add(el.id);
-        });
-        const uniquePosts = Array.from(uniquePostsSet);
-
         const posts: PostsViewDto[] = [];
-        uniquePosts.forEach((postId) => {
+        postsSourceWithNewestLikes.forEach((post) => {
             let likes = [];
-            const postSource = postsSourceWithNewestLikes.filter(
-                (p) => p.id === postId,
-            );
 
-            postSource.map((p) => {
-                if (
-                    !!p.likesUserId &&
-                    !!p.likesUserLogin &&
-                    !!p.likesCreatedAt
-                ) {
-                    likes.push({
-                        addedAt: p.likesCreatedAt,
-                        userId: p.likesUserId,
-                        login: p.likesUserLogin,
-                    });
-                }
-            });
+            if (post.newestLikes) {
+                post.newestLikes.map((p) => {
+                    if (!!p.addedAt && !!p.userId && !!p.login) {
+                        likes.push({
+                            addedAt: p.addedAt,
+                            userId: p.userId,
+                            login: p.login,
+                        });
+                    }
+                });
+            }
 
             const fullPost: PostsViewDto = {
-                id: postSource[0].id,
-                blogId: postSource[0].blogId,
-                blogName: postSource[0].blogName,
-                content: postSource[0].content,
-                createdAt: postSource[0].createdAt,
-                title: postSource[0].title,
-                shortDescription: postSource[0].shortDescription,
+                id: post.id,
+                blogId: post.blogId,
+                blogName: post.blogName,
+                content: post.content,
+                createdAt: post.createdAt,
+                title: post.title,
+                shortDescription: post.shortDescription,
                 extendedLikesInfo: {
                     myStatus:
-                        postSource[0].myStatus === null
+                        post.myStatus === null
                             ? LikeStatus.None
-                            : (postSource[0].myStatus as LikeStatus),
-                    likesCount: postSource[0].likesCount,
-                    dislikesCount: postSource[0].dislikesCount,
+                            : (post.myStatus as LikeStatus),
+                    likesCount: post.likesCount,
+                    dislikesCount: post.dislikesCount,
                     newestLikes: likes,
                 },
             };

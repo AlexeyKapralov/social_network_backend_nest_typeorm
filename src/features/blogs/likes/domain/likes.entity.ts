@@ -1,23 +1,24 @@
 import { LikeStatus } from '../api/dto/output/likes-view.dto';
 import {
+    BaseEntity,
     Column,
     DeleteDateColumn,
     Entity,
     JoinColumn,
     ManyToOne,
-    OneToMany,
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Post } from '../../posts/domain/posts.entity';
 import { User } from '../../../users/domain/user-entity';
+import { Comment } from '../../comments/domain/comment.entity';
 
 @Entity()
-export class Like {
+export class Like extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
     @Column()
-    createdAt: string;
+    createdAt: Date;
 
     @Column()
     likeStatus: LikeStatus;
@@ -25,11 +26,15 @@ export class Like {
     @DeleteDateColumn()
     deletedDate: Date;
 
-    @ManyToOne(() => Post)
+    @ManyToOne(() => Post, { nullable: true })
     @JoinColumn({ name: 'parentId', referencedColumnName: 'id' })
     post: Post;
 
     @ManyToOne(() => User)
     @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
     user: User;
+
+    @ManyToOne(() => Comment, { nullable: true })
+    @JoinColumn({ name: 'commentId', referencedColumnName: 'id' })
+    comment: Comment;
 }

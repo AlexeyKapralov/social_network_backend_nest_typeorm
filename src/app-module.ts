@@ -16,6 +16,7 @@ import { Blog } from './features/blogs/blogs/domain/blog-entity';
 import { Post } from './features/blogs/posts/domain/posts.entity';
 import { Like } from './features/blogs/likes/domain/likes.entity';
 import { User } from './features/users/domain/user-entity';
+import { Comment } from './features/blogs/comments/domain/comment.entity';
 
 @Global()
 @Module({
@@ -42,7 +43,7 @@ import { User } from './features/users/domain/user-entity';
 
                 const isTesting = environmentSettings.isTesting;
 
-                const entitiesArray = [Device, Blog, Post, Like, User];
+                const entitiesArray = [Device, Blog, Post, Like, User, Comment];
 
                 const dbPassword = databaseSettings.DB_PASSWORD;
 
