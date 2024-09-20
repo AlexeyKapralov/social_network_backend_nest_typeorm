@@ -17,6 +17,12 @@ import { Post } from './features/blogs/posts/domain/posts.entity';
 import { Like } from './features/blogs/likes/domain/likes.entity';
 import { User } from './features/users/domain/user-entity';
 import { Comment } from './features/blogs/comments/domain/comment.entity';
+import { QuizModule } from './features/quiz/quiz.module';
+import { Answer } from './features/quiz/domain/answer.entity';
+import { Game } from './features/quiz/domain/game.entity';
+import { GameQuestion } from './features/quiz/domain/game-question.entity';
+import { Player } from './features/quiz/domain/player.entity';
+import { Question } from './features/quiz/domain/question.entity';
 
 @Global()
 @Module({
@@ -43,7 +49,19 @@ import { Comment } from './features/blogs/comments/domain/comment.entity';
 
                 const isTesting = environmentSettings.isTesting;
 
-                const entitiesArray = [Device, Blog, Post, Like, User, Comment];
+                const entitiesArray = [
+                    Device,
+                    Blog,
+                    Post,
+                    Like,
+                    User,
+                    Comment,
+                    Answer,
+                    Game,
+                    GameQuestion,
+                    Player,
+                    Question,
+                ];
 
                 const dbPassword = databaseSettings.DB_PASSWORD;
 
@@ -68,6 +86,7 @@ import { Comment } from './features/blogs/comments/domain/comment.entity';
         AuthModule,
         BlogsModule,
         PassportModule,
+        QuizModule,
         TestingModule.register(process.env.ENV),
         ConfigModule.forRoot({
             isGlobal: true,

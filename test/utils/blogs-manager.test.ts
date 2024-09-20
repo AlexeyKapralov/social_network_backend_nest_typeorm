@@ -2,7 +2,7 @@ import { HttpStatus, INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiSettings } from '../../src/settings/env/api-settings';
 import request from 'supertest';
-import { BlogInputDto } from '../../src/features/blogs/api/dto/input/blog-input-dto';
+import { BlogInputDto } from '../../src/features/blogs/blogs/api/dto/input/blog-input-dto';
 
 export class BlogsManagerTest {
     constructor(protected readonly app: INestApplication) {}

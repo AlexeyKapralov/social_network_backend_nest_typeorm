@@ -1,5 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    OneToMany,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { Player } from '../../quiz/domain/player.entity';
 
 @Entity()
 export class User {
@@ -39,38 +47,7 @@ export class User {
     @Exclude()
     confirmationCodeExpireDate: Date;
 
-    // setLogin(newLogin: string) {
-    //     this.login = newLogin;
-    // }
-    //
-    // static createUser(userBody: UserInputDto, passHash: string, confirmationCode: string) {
-    //     const user = new this();
-    //
-    //     user.email = userBody.email;
-    //     user.createdAt = new Date().toISOString();
-    //     user.password = passHash;
-    //     user.login = userBody.login;
-    //     user.isDeleted = false;
-    //     user.isConfirmed = false;
-    //     user.confirmationCode = confirmationCode;
-    //
-    //     return user;
-    // }
+    @OneToMany(() => Player, (player) => player.user)
+    @JoinColumn({ name: 'playerId' })
+    players: Player[];
 }
-
-// export const UserSchema = SchemaFactory.createForClass(User);
-//
-// UserSchema.methods = {
-//     setLogin: User.prototype.setLogin,
-// };
-//
-// UserSchema.statics = {
-//     createUser: User.createUser,
-// };
-//
-// export type UserStaticType = {
-//     createUser: (userBody: UserInputDto, passHash: string, confirmationCode: string) => UserDocument;
-// };
-//
-// export type UserDocument = HydratedDocument<User>;
-// export type UserModelType = Model<UserDocument> & UserStaticType;

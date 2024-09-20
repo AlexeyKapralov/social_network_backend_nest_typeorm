@@ -3,8 +3,6 @@ import { AppModule } from '../../src/app-module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from '../../src/settings/apply-app-settings';
 import { DataSource } from 'typeorm';
-import { aDescribe } from '../utils/aDescribe';
-import { skipSettings } from '../utils/skip-settings';
 import { Device } from '../../src/features/auth/devices/domain/device-entity';
 import { v4 as uuid } from 'uuid';
 import { DeviceService } from '../../src/features/auth/devices/application/device-service';
