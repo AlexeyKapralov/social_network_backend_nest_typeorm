@@ -45,4 +45,5 @@ export enum InterlayerStatuses {
     NOT_FOUND = 2,
     FORBIDDEN = 3,
     BAD_REQUEST = 3,
+    UNAUTHORIZED = 4,
 }

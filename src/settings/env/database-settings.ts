@@ -2,12 +2,14 @@ import { EnvironmentVariable } from './env-settings';
 import { IsNumber, IsString } from 'class-validator';
 
 export class DatabaseSettings {
-    constructor( private environmentVariable: EnvironmentVariable ) {}
+    constructor(private environmentVariable: EnvironmentVariable) {}
 
     @IsString()
-    DB_PASSWORD = this.environmentVariable.DB_PASSWORD
+    POSTGRESQL_TEST_DB_NAME = this.environmentVariable.POSTGRESQL_TEST_DB_NAME;
     @IsString()
-    POSTGRESQL_TEST_DB_NAME= this.environmentVariable.POSTGRESQL_TEST_DB_NAME
+    POSTGRESQL_DB_NAME = this.environmentVariable.POSTGRESQL_DB_NAME;
     @IsString()
-    POSTGRESQL_DB_NAME = this.environmentVariable.POSTGRESQL_DB_NAME
+    POSTGRES_USER = this.environmentVariable.POSTGRES_USER;
+    @IsString()
+    POSTGRES_PASSWORD = this.environmentVariable.POSTGRES_PASSWORD;
 }

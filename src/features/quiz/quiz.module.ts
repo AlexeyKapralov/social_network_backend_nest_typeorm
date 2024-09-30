@@ -8,6 +8,10 @@ import { Game } from './domain/game.entity';
 import { GameQuestion } from './domain/game-question.entity';
 import { Player } from './domain/player.entity';
 import { Question } from './domain/question.entity';
+import { QuizSuperAdminController } from './api/quiz-super-admin.controller';
+import { GetQuestionsQuery } from './infrastructure/queries/get-questions.query';
+import { CqrsModule } from '@nestjs/cqrs';
+import { CreateAnswerUseCase } from './application/usecases/create-answer.command';
 
 @Module({
     imports: [
@@ -18,9 +22,15 @@ import { Question } from './domain/question.entity';
             Player,
             Question,
         ]),
+        CqrsModule,
     ],
-    controllers: [QuizController],
-    providers: [QuizService, QuizRepository],
+    controllers: [QuizController, QuizSuperAdminController],
+    providers: [
+        QuizService,
+        QuizRepository,
+        GetQuestionsQuery,
+        CreateAnswerUseCase,
+    ],
     exports: [QuizService],
 })
 export class QuizModule {}

@@ -4,19 +4,14 @@ import {
     InterlayerNotice,
     InterlayerStatuses,
 } from '../../../base/models/interlayer';
-import {
-    GamePairViewDto,
-    GameStatuses,
-} from '../api/dto/output/game-pair-view.dto';
+import { GamePairViewDto } from '../api/dto/output/game-pair-view.dto';
 import { Game } from '../domain/game.entity';
 import { GamePlayerProgressViewDto } from '../api/dto/output/game-player-progress-view.dto';
 import { QuestionViewDto } from '../api/dto/output/question-view.dto';
-import {
-    answerStatusesEnum,
-    AnswerViewDto,
-} from '../api/dto/output/answer-view.dto';
-import { PlayerViewDto } from '../api/dto/output/player-view.dto';
 import { Player } from '../domain/player.entity';
+import { QuestionInputDto } from '../api/dto/input/question-input.dto';
+import { questionViewMapper } from '../../../base/mappers/question-view-mapper';
+import { PublishInputDto } from '../api/dto/input/publish-input.dto';
 
 @Injectable()
 export class QuizService {
@@ -50,7 +45,6 @@ export class QuizService {
             //todo если игра есть то присоединиться к игре
             game = await this.quizRepository.connectToGame(game.id, userId);
         }
-
         if (!game) {
             notice.addError(
                 'user was not connected to pair',
@@ -58,6 +52,17 @@ export class QuizService {
                 InterlayerStatuses.NOT_FOUND,
             );
             return notice;
+        }
+
+        let questions = [];
+        if (game.gameQuestions.length > 0) {
+            game.gameQuestions.map((gq) => {
+                let gameQuestion = {
+                    id: gq.id,
+                    body: gq.question.body,
+                };
+                questions.push(gameQuestion);
+            });
         }
 
         let player1: Player;
@@ -91,7 +96,7 @@ export class QuizService {
                     : {},
                 score: player2 ? player2.score : 0,
             } as GamePlayerProgressViewDto,
-            questions: [],
+            questions: questions,
             status: game.status,
             pairCreatedDate: game.createdAt.toISOString(),
             startGameDate: game.startedAt ? game.startedAt.toISOString() : null,
@@ -100,6 +105,139 @@ export class QuizService {
                 : null,
         };
         notice.addData(mappedGame);
+        return notice;
+    }
+
+    async createQuestion(
+        questionInputDto: QuestionInputDto,
+    ): Promise<InterlayerNotice<QuestionViewDto>> {
+        const notice = new InterlayerNotice<QuestionViewDto>();
+
+        //todo проверить нет ли такого же вопроса уже
+        const existQuestion = await this.quizRepository.getQuestion(
+            questionInputDto.body,
+        );
+        if (existQuestion) {
+            notice.addError(
+                'question already exist',
+                'body',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        const question =
+            await this.quizRepository.createQuestion(questionInputDto);
+        if (!question) {
+            notice.addError(
+                'question was not created',
+                'question',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        notice.addData(questionViewMapper(question));
+        return notice;
+    }
+
+    async deleteQuestion(questionId: string): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        //todo проверить есть ли такой вопрос
+        const existQuestion =
+            await this.quizRepository.getQuestionById(questionId);
+        if (!existQuestion) {
+            notice.addError(
+                'question did not found',
+                'question',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        const isDeleteQuestion =
+            await this.quizRepository.deleteQuestion(questionId);
+        if (!isDeleteQuestion) {
+            notice.addError(
+                'question was not deleted',
+                'question',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        return notice;
+    }
+
+    async updateQuestion(
+        questionId: string,
+        questionInputDto: QuestionInputDto,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        //todo проверить есть ли такой вопрос
+        const existQuestion =
+            await this.quizRepository.getQuestionById(questionId);
+        if (!existQuestion) {
+            notice.addError(
+                'question did not found',
+                'question',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        //todo обновить
+        const isUpdatedQuestion = await this.quizRepository.updateQuestion(
+            questionId,
+            questionInputDto,
+        );
+        if (!isUpdatedQuestion) {
+            notice.addError(
+                'question was not updated',
+                'question',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        return notice;
+    }
+
+    async updatePublishedStatusQuestion(
+        questionId: string,
+        publishInputDto: PublishInputDto,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        //todo проверить есть ли такой вопрос
+        const existQuestion =
+            await this.quizRepository.getQuestionById(questionId);
+        if (!existQuestion) {
+            notice.addError(
+                'question did not found',
+                'question',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        //todo обновить
+        const isUpdatedQuestion =
+            await this.quizRepository.updatePublishedStatusQuestion(
+                questionId,
+                publishInputDto,
+            );
+        if (!isUpdatedQuestion) {
+            notice.addError(
+                'question published was not updated',
+                'question published',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
         return notice;
     }
 }

@@ -1,26 +1,25 @@
-import dayjs from 'dayjs';
 import { Test, TestingModule } from '@nestjs/testing';
 import { QuizService } from '../../../src/features/quiz/application/quiz.service';
-import {
-    InterlayerNotice,
-    InterlayerStatuses,
-} from '../../../src/base/models/interlayer';
+import { InterlayerStatuses } from '../../../src/base/models/interlayer';
 import { v4 as uuid } from 'uuid';
-import {
-    GamePairViewDto,
-    GameStatuses,
-} from '../../../src/features/quiz/api/dto/output/game-pair-view.dto';
+import { GameStatuses } from '../../../src/features/quiz/api/dto/output/game-pair-view.dto';
 import { AppModule } from '../../../src/app-module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from '../../../src/settings/apply-app-settings';
 import { DataSource } from 'typeorm';
+import {
+    CreateAnswerCommand,
+    CreateAnswerUseCase,
+} from '../../../src/features/quiz/application/usecases/create-answer.command';
+import { AnswerStatusesEnum } from '../../../src/common/enum/answer-statuses.enum';
+import { Answer } from '../../../src/features/quiz/domain/answer.entity';
 import { Player } from '../../../src/features/quiz/domain/player.entity';
 
 describe('Quiz service integration tests', () => {
     let app: NestExpressApplication;
     let quizService: QuizService;
     let dataSource: DataSource;
-    // let appointmentsService: AppointmentsService;
+    let createAnswerHandler: CreateAnswerUseCase;
 
     beforeAll(async () => {
         const testModule: TestingModule = await Test.createTestingModule({
@@ -42,6 +41,7 @@ describe('Quiz service integration tests', () => {
         applyAppSettings(app);
         await app.init();
         quizService = app.get<QuizService>(QuizService);
+        createAnswerHandler = app.get<CreateAnswerUseCase>(CreateAnswerUseCase);
         dataSource = app.get<DataSource>(DataSource);
         await dataSource.query(`
             DO $$
@@ -56,6 +56,32 @@ describe('Quiz service integration tests', () => {
                     EXECUTE 'TRUNCATE TABLE ' || quote_ident(table_name) || ' CASCADE;';
                 END LOOP;
             END $$;
+        `);
+
+        await dataSource.query(`
+            INSERT INTO public.question
+            (id, body, answers, published, "createdAt")
+            VALUES(uuid_generate_v4(), 'body1', 'correct answer, true, answer', true, '2024-09-28T07:28:14.079Z');
+            
+            INSERT INTO public.question
+            (id, body, answers, published, "createdAt")
+            VALUES(uuid_generate_v4(), 'body2', 'correct answer, true, answer', true, '2024-09-28T08:28:14.079Z');
+            
+            INSERT INTO public.question
+            (id, body, answers, published, "createdAt")
+            VALUES(uuid_generate_v4(), 'body3', 'correct answer, true, answer', true, '2024-09-28T09:28:14.079Z');
+            
+            INSERT INTO public.question
+            (id, body, answers, published, "createdAt")
+            VALUES(uuid_generate_v4(), 'body4', 'correct answer, true, answer', true, '2024-09-28T10:28:14.079Z');
+            
+            INSERT INTO public.question
+            (id, body, answers, published, "createdAt")
+            VALUES(uuid_generate_v4(), 'body5', 'correct answer, true, answer', true, '2024-09-28T11:28:14.079Z');
+            
+            INSERT INTO public.question
+            (id, body, answers, published, "createdAt")
+            VALUES(uuid_generate_v4(), 'body6', 'correct answer, true, answer', true, '2024-09-28T12:28:14.079Z');
         `);
     });
 
@@ -164,7 +190,14 @@ describe('Quiz service integration tests', () => {
                 },
                 score: 0,
             },
-            questions: [],
+            questions: expect.arrayContaining([
+                {
+                    body: expect.any(String),
+                    id: expect.stringMatching(
+                        /^(?!00000000-0000-0000-0000-000000000000)([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/,
+                    ),
+                },
+            ]),
             status: GameStatuses.Active,
             pairCreatedDate: expect.stringMatching(
                 /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
@@ -174,6 +207,8 @@ describe('Quiz service integration tests', () => {
             ),
             finishGameDate: null,
         });
+
+        expect(result.data.questions.length).toBe(5);
 
         const players = await dataSource.query(`
             SELECT id, score, "userId"
@@ -206,5 +241,74 @@ describe('Quiz service integration tests', () => {
             key: 'user',
             code: InterlayerStatuses.FORBIDDEN,
         });
+    });
+
+    it(`should create answer of first question`, async () => {
+        const { userId } = expect.getState();
+        const createAnswerCommand = new CreateAnswerCommand(userId, {
+            answer: 'correct answer',
+        });
+        const createAnswerInterlayer =
+            await createAnswerHandler.execute(createAnswerCommand);
+
+        const answer = await dataSource.query(`
+            SELECT status, "gameId"
+            FROM public.answer
+        `);
+
+        const player: Player[] = await dataSource.query(`
+            SELECT *
+            FROM public.player
+            WHERE "gameId" = '${answer[0].gameId}' AND "userId" = '${userId}'
+        `);
+
+        expect(answer.length).toBe(1);
+        expect(answer[0].status).toEqual(AnswerStatusesEnum.Correct);
+        expect(createAnswerInterlayer.data.answerStatus).toEqual(
+            AnswerStatusesEnum.Correct,
+        );
+        expect(player[0].score).toBe(1);
+    });
+
+    it(`shouldn't create answer with incorrect answer`, async () => {
+        const { userId } = expect.getState();
+        const createAnswerCommand = new CreateAnswerCommand(userId, {
+            answer: 'incorrect answer',
+        });
+        const createAnswerInterlayer =
+            await createAnswerHandler.execute(createAnswerCommand);
+
+        const answer: Answer[] = await dataSource.query(`
+            SELECT *
+            FROM public.answer
+            ORDER BY "createdAt" DESC
+        `);
+        expect(answer.length).toBe(2);
+        expect(answer[0].status).toEqual(AnswerStatusesEnum.Incorrect);
+        expect(createAnswerInterlayer.data.answerStatus).toEqual(
+            AnswerStatusesEnum.Incorrect,
+        );
+    });
+
+    it(`should create answer if player answers already five questions`, async () => {
+        const { userId } = expect.getState();
+        const createAnswerCommand = new CreateAnswerCommand(userId, {
+            answer: 'correct answer',
+        });
+        for (let i = 0; i <= 4; i++) {
+            const createAnswerInterlayer =
+                await createAnswerHandler.execute(createAnswerCommand);
+            if (i === 4) {
+                expect(createAnswerInterlayer.extensions[0].message).toBe(
+                    'user already answers of 5 questions',
+                );
+            }
+        }
+
+        const answer: Answer[] = await dataSource.query(`
+            SELECT *
+            FROM public.answer
+        `);
+        expect(answer.length).toBe(5);
     });
 });

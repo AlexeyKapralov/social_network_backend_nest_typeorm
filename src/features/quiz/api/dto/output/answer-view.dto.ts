@@ -1,10 +1,7 @@
+import { AnswerStatusesEnum } from '../../../../../common/enum/answer-statuses.enum';
+
 export class AnswerViewDto {
     questionId: string;
-    answerStatus: answerStatusesEnum;
+    answerStatus: AnswerStatusesEnum;
     addedAt: string;
-}
-
-export enum answerStatusesEnum {
-    Correct = 'Correct',
-    Incorrect = 'Incorrect',
 }

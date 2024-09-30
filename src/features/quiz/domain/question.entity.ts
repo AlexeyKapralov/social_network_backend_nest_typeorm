@@ -1,6 +1,7 @@
 import {
     BaseEntity,
     Column,
+    DeleteDateColumn,
     Entity,
     JoinColumn,
     ManyToOne,
@@ -18,6 +19,18 @@ export class Question extends BaseEntity {
 
     @Column({ type: 'simple-array' })
     answers: string[];
+
+    @Column({ default: false })
+    published: boolean;
+
+    @Column()
+    createdAt: Date;
+
+    @Column({ nullable: true })
+    updatedAt: Date;
+
+    @DeleteDateColumn()
+    deletedAt: Date;
 
     @ManyToOne(() => GameQuestion)
     @JoinColumn({ name: 'gameQuestionsId' })

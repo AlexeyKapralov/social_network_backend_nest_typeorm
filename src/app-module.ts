@@ -63,12 +63,12 @@ import { Question } from './features/quiz/domain/question.entity';
                     Question,
                 ];
 
-                const dbPassword = databaseSettings.DB_PASSWORD;
+                const dbPassword = databaseSettings.POSTGRES_PASSWORD;
 
                 return {
                     type: 'postgres',
                     host: 'localhost', //'127.0.0.1',
-                    username: 'postgres',
+                    username: databaseSettings.POSTGRES_USER,
                     password: dbPassword,
                     database: database,
                     port: 5432,
