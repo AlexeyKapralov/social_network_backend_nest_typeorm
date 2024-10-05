@@ -8,6 +8,11 @@ import { QuizRepository } from '../../infrastructure/quiz.repository';
 import { AnswerViewDto } from '../../api/dto/output/answer-view.dto';
 import { answerViewDtoMapper } from '../../../../base/mappers/answer-view-mapper';
 import { AnswerStatusesEnum } from '../../../../common/enum/answer-statuses.enum';
+import { Answer } from '../../domain/answer.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Game } from '../../domain/game.entity';
+import { GameQuestion } from '../../domain/game-question.entity';
 
 export class CreateAnswerCommand {
     constructor(
@@ -21,7 +26,10 @@ export class CreateAnswerUseCase
     implements
         ICommandHandler<CreateAnswerCommand, InterlayerNotice<AnswerViewDto>>
 {
-    constructor(private readonly quizRepository: QuizRepository) {}
+    constructor(
+        private readonly quizRepository: QuizRepository,
+        @InjectRepository(Answer) private answerRepo: Repository<Answer>,
+    ) {}
 
     async execute(
         command: CreateAnswerCommand,
@@ -41,9 +49,10 @@ export class CreateAnswerUseCase
             );
             return notice;
         }
+
         //проверить есть ли активная игра
         const activeGame =
-            await this.quizRepository.getActiveGameOfUser(userId);
+            await this.quizRepository.getActiveOrPendingGameOfUser(userId);
         if (!activeGame) {
             notice.addError(
                 'user is not take part in active game',
@@ -72,6 +81,7 @@ export class CreateAnswerUseCase
             player.id,
             activeGame.id,
         );
+
         if (countAnswers === 5) {
             notice.addError(
                 'user already answers of 5 questions',
@@ -109,15 +119,15 @@ export class CreateAnswerUseCase
             answerStatus,
         );
 
-        //если второй игрок еще не ответил, то плюс бал
+        //если все ответы быстрее второй игрок еще не ответил, то плюс бал
         const game = await this.quizRepository.getGameById(activeGame.id);
 
         //получить id другого игрока
         let anotherPlayerId;
         if (game.player_1_id === player.id) {
-            anotherPlayerId = game.player_1_id;
-        } else {
             anotherPlayerId = game.player_2_id;
+        } else {
+            anotherPlayerId = game.player_1_id;
         }
 
         //посчитать у этого игрока кол-во ответов
@@ -128,15 +138,46 @@ export class CreateAnswerUseCase
             );
         const currentPlayerCountAnswers =
             await this.quizRepository.getCountAnswers(player.id, activeGame.id);
+        const currentPlayerCountCorrectAnswers =
+            await this.quizRepository.getCountCorrectAnswers(
+                player.id,
+                activeGame.id,
+            );
+
         //если он еще не ответил на все вопросы, то этому игроку плюс бал
         if (
             anotherPlayerCountAnswers !== 5 &&
-            currentPlayerCountAnswers === 5
+            currentPlayerCountAnswers === 5 &&
+            currentPlayerCountCorrectAnswers > 0
         ) {
             await this.quizRepository.addScore(player.id);
         }
 
-        notice.addData(answerViewDtoMapper(answer));
+        if (
+            anotherPlayerCountAnswers === 5 &&
+            currentPlayerCountAnswers === 5
+        ) {
+            await this.quizRepository.finishGame(activeGame.id);
+        }
+
+        const mappedAnswer: AnswerViewDto = await this.answerRepo
+            .createQueryBuilder('a')
+            .leftJoinAndSelect(
+                GameQuestion,
+                'gq',
+                `gq."questionId" = a."questionId" and gq."gameId" = a."gameId"`,
+            )
+            .select([
+                'gq.id as "questionId"',
+                'a.status as "answerStatus"',
+                'a."createdAt" as "addedAt"',
+            ])
+            .andWhere('a."id" = :answerId', {
+                answerId: answer.id,
+            })
+            .getRawOne();
+
+        notice.addData(mappedAnswer);
         return notice;
     }
 }

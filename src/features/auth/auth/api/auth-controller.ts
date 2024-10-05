@@ -33,7 +33,7 @@ import { AccessTokenPayloadDto } from '../../../../common/dto/access-token-paylo
 import { UsersQueryRepository } from '../../../users/infrastructure/users-query-repository';
 import { MeViewDto } from './dto/output/me-view-dto';
 
-@UseGuards(ThrottlerBehindProxyGuard)
+// @UseGuards(ThrottlerBehindProxyGuard)
 @Controller('auth')
 export class AuthController {
     constructor(

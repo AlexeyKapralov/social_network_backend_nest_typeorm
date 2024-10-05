@@ -2,6 +2,12 @@ import {
     Body,
     Controller,
     ForbiddenException,
+    Get,
+    HttpCode,
+    HttpStatus,
+    NotFoundException,
+    Param,
+    ParseUUIDPipe,
     Post,
     Req,
     UnauthorizedException,
@@ -12,19 +18,28 @@ import { AccessTokenPayloadDto } from '../../../common/dto/access-token-payload-
 import { QuizService } from '../application/quiz.service';
 import { AnswerInputDto } from './dto/input/answer-input.dto';
 import { CreateAnswerCommand } from '../application/usecases/create-answer.command';
-import { CommandBus } from '@nestjs/cqrs';
-import { InterlayerNotice } from '../../../base/models/interlayer';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import {
+    InterlayerNotice,
+    InterlayerStatuses,
+} from '../../../base/models/interlayer';
 import { AnswerViewDto } from './dto/output/answer-view.dto';
+import {
+    GetGamePayload,
+    GetGameResultType,
+} from '../infrastructure/queries/get-game.query';
 
 @Controller('pair-game-quiz/pairs')
 export class QuizController {
     constructor(
         private quizService: QuizService,
         private readonly commandBus: CommandBus,
+        private readonly queryBus: QueryBus,
     ) {}
 
     @UseGuards(JwtAuthGuard)
     @Post('connection')
+    @HttpCode(HttpStatus.OK)
     async connection(@Req() req: any) {
         const accessTokenPayload: AccessTokenPayloadDto = req.user.payload;
         if (!accessTokenPayload.userId) {
@@ -32,6 +47,7 @@ export class QuizController {
         }
         const createConnectionInterlayer =
             await this.quizService.createConnection(accessTokenPayload.userId);
+
         if (createConnectionInterlayer.hasError()) {
             throw new ForbiddenException();
         }
@@ -41,6 +57,7 @@ export class QuizController {
 
     @UseGuards(JwtAuthGuard)
     @Post('my-current/answers')
+    @HttpCode(HttpStatus.OK)
     async createAnswer(
         @Req() req: any,
         @Body() answerInputDto: AnswerInputDto,
@@ -64,5 +81,69 @@ export class QuizController {
         }
 
         return createAnswerResult.data;
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('my-current')
+    async getCurrentUnfinishedGame(@Req() req: any) {
+        const accessTokenPayload: AccessTokenPayloadDto = req.user.payload;
+        if (!accessTokenPayload.userId) {
+            throw new UnauthorizedException();
+        }
+
+        const currentGameInterlayer =
+            await this.quizService.getActiveGameByUserId(
+                accessTokenPayload.userId,
+            );
+        if (currentGameInterlayer.hasError()) {
+            throw new NotFoundException();
+        }
+
+        const queryPayload = new GetGamePayload(
+            currentGameInterlayer.data.id,
+            accessTokenPayload.userId,
+        );
+        const gameInterlayer = await this.queryBus.execute<
+            GetGamePayload,
+            InterlayerNotice<GetGameResultType>
+        >(queryPayload);
+        if (gameInterlayer.hasError()) {
+            throw new NotFoundException();
+        }
+
+        return gameInterlayer.data;
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get(':gameId')
+    async getGameById(
+        @Param('gameId', ParseUUIDPipe) gameId: string,
+        @Req() req: any,
+    ) {
+        const accessTokenPayload: AccessTokenPayloadDto = req.user.payload;
+        if (!accessTokenPayload.userId) {
+            throw new UnauthorizedException();
+        }
+
+        const queryPayload = new GetGamePayload(
+            gameId,
+            accessTokenPayload.userId,
+        );
+
+        const gameInterlayer = await this.queryBus.execute<
+            GetGamePayload,
+            InterlayerNotice<GetGameResultType>
+        >(queryPayload);
+
+        if (gameInterlayer.hasError()) {
+            switch (gameInterlayer.extensions[0].code) {
+                case InterlayerStatuses.FORBIDDEN:
+                    throw new ForbiddenException();
+                case InterlayerStatuses.NOT_FOUND:
+                    throw new NotFoundException();
+            }
+        }
+
+        return gameInterlayer.data;
     }
 }

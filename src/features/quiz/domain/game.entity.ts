@@ -17,13 +17,13 @@ export class Game extends BaseEntity {
     @Column({ collation: 'C' })
     status: GameStatuses;
 
-    @Column()
+    @Column({ type: 'timestamptz' })
     createdAt: Date;
 
-    @Column({ nullable: true })
+    @Column({ nullable: true, type: 'timestamptz' })
     startedAt: Date;
 
-    @Column({ nullable: true })
+    @Column({ nullable: true, type: 'timestamptz' })
     finishedAt: Date;
 
     @Column({ type: 'uuid' })

@@ -14,6 +14,7 @@ import {
 import { AnswerStatusesEnum } from '../../../src/common/enum/answer-statuses.enum';
 import { Answer } from '../../../src/features/quiz/domain/answer.entity';
 import { Player } from '../../../src/features/quiz/domain/player.entity';
+import { Game } from '../../../src/features/quiz/domain/game.entity';
 
 describe('Quiz service integration tests', () => {
     let app: NestExpressApplication;
@@ -118,6 +119,7 @@ describe('Quiz service integration tests', () => {
             VALUES('${userId2}', 'login2', 'password', 'email', '2024-08-10 11:07:54.927', '1234', true, '2024-08-10 11:07:54.927');
         `);
         expect.setState({ userId: userId2 });
+        expect.setState({ userId2: userId });
 
         const result = await quizService.createConnection(userId);
         expect(result.hasError()).toBeFalsy();
@@ -290,7 +292,7 @@ describe('Quiz service integration tests', () => {
         );
     });
 
-    it(`should create answer if player answers already five questions`, async () => {
+    it(`shouldn't create answer if player answers already five questions`, async () => {
         const { userId } = expect.getState();
         const createAnswerCommand = new CreateAnswerCommand(userId, {
             answer: 'correct answer',
@@ -310,5 +312,51 @@ describe('Quiz service integration tests', () => {
             FROM public.answer
         `);
         expect(answer.length).toBe(5);
+    });
+
+    it(`should change status game in finished if both players answer 5 questions`, async () => {
+        const { userId2 } = expect.getState();
+        const createAnswerCommand = new CreateAnswerCommand(userId2, {
+            answer: 'correct answer',
+        });
+        for (let i = 0; i <= 4; i++) {
+            const createAnswerInterlayer =
+                await createAnswerHandler.execute(createAnswerCommand);
+        }
+
+        const game: Game[] = await dataSource.query(`
+            SELECT *
+            FROM public.game
+        `);
+        expect(game[0].status).toBe(GameStatuses.Finished);
+        expect(game[0].finishedAt.toISOString()).toEqual(
+            expect.stringMatching(
+                /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
+            ),
+        );
+        expect.setState({ gameId: game[0].id });
+    });
+
+    it(`should get game by id`, async () => {
+        const { userId2 } = expect.getState();
+
+        const createAnswerCommand = new CreateAnswerCommand(userId2, {
+            answer: 'correct answer',
+        });
+        for (let i = 0; i <= 4; i++) {
+            const createAnswerInterlayer =
+                await createAnswerHandler.execute(createAnswerCommand);
+        }
+
+        const game: Game[] = await dataSource.query(`
+            SELECT *
+            FROM public.game
+        `);
+        expect(game[0].status).toBe(GameStatuses.Finished);
+        expect(game[0].finishedAt.toISOString()).toEqual(
+            expect.stringMatching(
+                /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
+            ),
+        );
     });
 });

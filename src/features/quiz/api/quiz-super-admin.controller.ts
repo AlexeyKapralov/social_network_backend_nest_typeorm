@@ -26,7 +26,10 @@ import { PublishInputDto } from './dto/input/publish-input.dto';
 import { QueryDtoForQuiz } from '../../../common/dto/quiz-query-dto';
 import { QueryBus } from '@nestjs/cqrs';
 import { GetQuestionsPayload } from '../infrastructure/queries/get-questions.query';
-import { InterlayerNotice } from '../../../base/models/interlayer';
+import {
+    InterlayerNotice,
+    InterlayerStatuses,
+} from '../../../base/models/interlayer';
 import { PaginatorDto } from '../../../common/dto/paginator-dto';
 
 @Controller('sa/quiz')
@@ -93,7 +96,12 @@ export class QuizSuperAdminController {
             questionInputDto,
         );
         if (deleteQuestionInterlayer.hasError()) {
-            throw new NotFoundException();
+            switch (deleteQuestionInterlayer.extensions[0].code) {
+                case InterlayerStatuses.NOT_FOUND:
+                    throw new NotFoundException();
+                case InterlayerStatuses.BAD_REQUEST:
+                    throw new BadRequestException();
+            }
         }
     }
 

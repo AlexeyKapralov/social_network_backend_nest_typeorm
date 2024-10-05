@@ -20,7 +20,7 @@ export class Answer extends BaseEntity {
     @Column({ collation: 'C' })
     status: string;
 
-    @Column()
+    @Column({ type: 'timestamptz' })
     createdAt: Date;
 
     @ManyToOne(() => Question)

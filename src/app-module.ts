@@ -27,12 +27,12 @@ import { Question } from './features/quiz/domain/question.entity';
 @Global()
 @Module({
     imports: [
-        ThrottlerModule.forRoot([
-            {
-                ttl: 10000,
-                limit: 5,
-            },
-        ]),
+        // ThrottlerModule.forRoot([
+        //     {
+        //         ttl: 10000,
+        //         limit: 5,
+        //     },
+        // ]),
         TypeOrmModule.forRootAsync({
             useFactory: (configService: ConfigService<ConfigurationType>) => {
                 const environmentSettings = configService.get(

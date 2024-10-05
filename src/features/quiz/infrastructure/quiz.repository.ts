@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Game } from '../domain/game.entity';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { GameStatuses } from '../api/dto/output/game-pair-view.dto';
 import { Player } from '../domain/player.entity';
 import { v4 as uuid } from 'uuid';
@@ -18,6 +18,7 @@ export class QuizRepository {
     constructor(
         @InjectDataSource() private dataSource: DataSource,
         @InjectRepository(Game) private gameRepo: Repository<Game>,
+        @InjectRepository(Question) private questionRepo: Repository<Question>,
         @InjectRepository(Player) private playerRepo: Repository<Player>,
     ) {}
 
@@ -84,10 +85,17 @@ export class QuizRepository {
         return players.length > 0;
     }
 
-    async getActiveGameOfUser(userId: string): Promise<Game | null> {
+    async getActiveOrPendingGameOfUser(userId: string): Promise<Game | null> {
         const games = await this.gameRepo.find({
-            where: { status: GameStatuses.Active },
+            where: [
+                { status: GameStatuses.Active },
+                { status: GameStatuses.PendingSecondPlayer },
+            ],
         });
+
+        if (games.length === 0) {
+            return null;
+        }
 
         const gamesIds = games.map((game: Game) => game.id);
 
@@ -98,6 +106,10 @@ export class QuizRepository {
             },
         });
 
+        if (players.length === 0) {
+            return null;
+        }
+
         const activeGame = await this.gameRepo.findOne({
             where: [
                 {
@@ -105,12 +117,110 @@ export class QuizRepository {
                     player_1_id: players[0].id,
                 },
                 {
+                    status: GameStatuses.PendingSecondPlayer,
+                    player_1_id: players[0].id,
+                },
+                {
                     status: GameStatuses.Active,
+                    player_2_id: players[0].id,
+                },
+                {
+                    status: GameStatuses.PendingSecondPlayer,
                     player_2_id: players[0].id,
                 },
             ],
         });
         return activeGame;
+    }
+
+    async getActiveGameOfUser(userId: string): Promise<Game | null> {
+        const games = await this.gameRepo.find({
+            where: [
+                { status: GameStatuses.Active },
+                { status: GameStatuses.PendingSecondPlayer },
+            ],
+        });
+
+        if (games.length === 0) {
+            return null;
+        }
+
+        const gamesIds = games.map((game: Game) => game.id);
+
+        const players = await this.playerRepo.find({
+            where: {
+                game: { id: In([...gamesIds]) },
+                user: { id: userId },
+            },
+        });
+
+        if (players.length === 0) {
+            return null;
+        }
+
+        const activeGame = await this.gameRepo.findOne({
+            where: [
+                {
+                    status: GameStatuses.Active,
+                    player_1_id: players[0].id,
+                },
+                {
+                    status: GameStatuses.PendingSecondPlayer,
+                    player_1_id: players[0].id,
+                },
+                {
+                    status: GameStatuses.Active,
+                    player_2_id: players[0].id,
+                },
+                {
+                    status: GameStatuses.PendingSecondPlayer,
+                    player_2_id: players[0].id,
+                },
+            ],
+        });
+        return activeGame;
+    }
+
+    async getPendingGameOfUser(userId: string): Promise<Game | null> {
+        const games = await this.gameRepo.find({
+            where: { status: GameStatuses.PendingSecondPlayer },
+        });
+
+        if (games.length === 0) {
+            return null;
+        }
+
+        const gamesIds = games.map((game: Game) => game.id);
+
+        const players = await this.playerRepo.find({
+            where: {
+                game: { id: In([...gamesIds]) },
+                user: { id: userId },
+            },
+        });
+        if (players.length === 0) {
+            return null;
+        }
+
+        const pendingGame = await this.gameRepo.findOne({
+            where: [
+                {
+                    status: GameStatuses.PendingSecondPlayer,
+                    player_1_id: players[0].id,
+                },
+                {
+                    status: GameStatuses.PendingSecondPlayer,
+                    player_2_id: players[0].id,
+                },
+            ],
+        });
+        return pendingGame;
+    }
+
+    async getTotalCountQuestions(): Promise<boolean> {
+        const questions = await this.questionRepo.count();
+
+        return questions >= 5;
     }
 
     async createGame(userId: string): Promise<Game | null> {
@@ -175,7 +285,7 @@ export class QuizRepository {
             const answerRepository = queryRunner.manager.getRepository(Answer);
             const answer = answerRepository.create({
                 status: answerStatus,
-                createdAt: new Date(),
+                createdAt: new Date().toISOString(),
                 player: {
                     id: playerId,
                 },
@@ -230,7 +340,11 @@ export class QuizRepository {
                 },
             });
 
-            if (!question.answers.includes(answerInputDto.answer)) {
+            if (
+                !question.answers
+                    .map((i) => i.trim())
+                    .includes(answerInputDto.answer)
+            ) {
                 await queryRunner.rollbackTransaction();
                 return AnswerStatusesEnum.Incorrect;
             }
@@ -345,6 +459,7 @@ export class QuizRepository {
         return await this.dataSource.getRepository(Question).findOne({
             where: {
                 body: questionBody,
+                published: true,
                 deletedAt: null,
             },
         });
@@ -398,19 +513,20 @@ export class QuizRepository {
         try {
             const questionRepository =
                 queryRunner.manager.getRepository(Question);
-            const questionResult = await questionRepository.update(
-                {
+            const question = await questionRepository.findOne({
+                where: {
                     id: id,
                     deletedAt: null,
                 },
-                {
-                    published: false,
-                    deletedAt: new Date(),
-                },
-            );
+            });
+            question.published = false;
+            question.deletedAt = new Date();
+            await questionRepository.save(question);
+
             await queryRunner.commitTransaction();
-            return questionResult.raw >= 0;
+            return true;
         } catch (e) {
+            await queryRunner.rollbackTransaction();
             return false;
         } finally {
             await queryRunner.release();
@@ -443,6 +559,7 @@ export class QuizRepository {
             await queryRunner.commitTransaction();
             return questionResult.raw >= 0;
         } catch (e) {
+            await queryRunner.rollbackTransaction();
             return false;
         } finally {
             await queryRunner.release();
@@ -461,19 +578,20 @@ export class QuizRepository {
         try {
             const questionRepository =
                 queryRunner.manager.getRepository(Question);
-            const questionResult = await questionRepository.update(
-                {
+            const question = await questionRepository.findOne({
+                where: {
                     id: id,
                     deletedAt: IsNull(),
                 },
-                {
-                    published: publishInputDto.published,
-                    updatedAt: new Date(),
-                },
-            );
+            });
+            question.published = publishInputDto.published;
+            question.updatedAt = new Date();
+            await questionRepository.save(question);
+
             await queryRunner.commitTransaction();
-            return questionResult.raw >= 0;
+            return true;
         } catch (e) {
+            await queryRunner.rollbackTransaction();
             return false;
         } finally {
             await queryRunner.release();
@@ -504,6 +622,39 @@ export class QuizRepository {
             await queryRunner.commitTransaction();
             return answersCount;
         } catch (e) {
+            await queryRunner.rollbackTransaction();
+            return null;
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
+    async getCountCorrectAnswers(
+        playerId: string,
+        gameId: string,
+    ): Promise<number | null> {
+        const queryRunner = this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const answerRepository = queryRunner.manager.getRepository(Answer);
+            const answersCount = await answerRepository.count({
+                where: {
+                    status: AnswerStatusesEnum.Correct,
+                    game: {
+                        id: gameId,
+                    },
+                    player: {
+                        id: playerId,
+                    },
+                },
+            });
+            await queryRunner.commitTransaction();
+            return answersCount;
+        } catch (e) {
+            await queryRunner.rollbackTransaction();
             return null;
         } finally {
             await queryRunner.release();
@@ -562,6 +713,7 @@ export class QuizRepository {
             await queryRunner.commitTransaction();
             return question;
         } catch (e) {
+            await queryRunner.rollbackTransaction();
             return null;
         } finally {
             await queryRunner.release();
@@ -587,6 +739,36 @@ export class QuizRepository {
             await queryRunner.commitTransaction();
         } catch (e) {
             console.log(e);
+            await queryRunner.rollbackTransaction();
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
+    async finishGame(gameId: string): Promise<boolean> {
+        const queryRunner = this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const gameRepository = queryRunner.manager.getRepository(Game);
+            const game = await gameRepository.findOne({
+                where: {
+                    id: gameId,
+                },
+            });
+
+            game.status = GameStatuses.Finished;
+            game.finishedAt = new Date();
+            await gameRepository.save(game);
+
+            await queryRunner.commitTransaction();
+            return true;
+        } catch (e) {
+            console.log(e);
+            await queryRunner.rollbackTransaction();
+            return false;
         } finally {
             await queryRunner.release();
         }

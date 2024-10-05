@@ -12,9 +12,12 @@ import { QuizSuperAdminController } from './api/quiz-super-admin.controller';
 import { GetQuestionsQuery } from './infrastructure/queries/get-questions.query';
 import { CqrsModule } from '@nestjs/cqrs';
 import { CreateAnswerUseCase } from './application/usecases/create-answer.command';
+import { GetGameQuery } from './infrastructure/queries/get-game.query';
+import { UsersModule } from '../users/users-module';
 
 @Module({
     imports: [
+        UsersModule,
         TypeOrmModule.forFeature([
             Answer,
             Game,
@@ -29,6 +32,7 @@ import { CreateAnswerUseCase } from './application/usecases/create-answer.comman
         QuizService,
         QuizRepository,
         GetQuestionsQuery,
+        GetGameQuery,
         CreateAnswerUseCase,
     ],
     exports: [QuizService],

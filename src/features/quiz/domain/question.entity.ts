@@ -23,13 +23,13 @@ export class Question extends BaseEntity {
     @Column({ default: false })
     published: boolean;
 
-    @Column()
+    @Column({ type: 'timestamptz' })
     createdAt: Date;
 
-    @Column({ nullable: true })
+    @Column({ nullable: true, type: 'timestamptz' })
     updatedAt: Date;
 
-    @DeleteDateColumn()
+    @DeleteDateColumn({ type: 'timestamptz' })
     deletedAt: Date;
 
     @ManyToOne(() => GameQuestion)

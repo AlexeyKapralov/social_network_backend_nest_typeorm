@@ -7,5 +7,8 @@ export const Trim = () =>
         if (Array.isArray(value)) {
             return value.map((item) => item.trim());
         }
-        return value?.trim();
+        return value
+            ?.split(',')
+            .map((i) => i.trim())
+            .join(',');
     });
