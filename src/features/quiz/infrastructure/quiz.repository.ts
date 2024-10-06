@@ -629,6 +629,59 @@ export class QuizRepository {
         }
     }
 
+    async checkIsAllAnswersFasterAnotherPLayer(
+        currentPlayerId: string,
+        gameId: string,
+    ): Promise<{
+        currentIsFaster: boolean;
+        anotherIsFaster: boolean;
+    } | null> {
+        const queryRunner = this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const answerRepository = queryRunner.manager.getRepository(Answer);
+            const answersCount: Array<{
+                currentIsFaster: boolean;
+                anotherIsFaster: boolean;
+            }> = await answerRepository.query(
+                `
+            select bool_and(t2.currentIsFaster) "currentIsFaster", bool_and(t2.anotherIsFaster) "anotherIsFaster" from 
+            (
+                SELECT 
+                    CASE 
+                        WHEN a."createdAt" < a2."createdAt" or a2."createdAt" is null THEN true
+                        ELSE false 
+                    END AS currentIsFaster,
+                    CASE 
+                        WHEN a."createdAt" > a2."createdAt" THEN true
+                        ELSE false 
+                    END AS anotherIsFaster
+                from answer a
+                left join (
+                    --another player
+                    SELECT * from answer a
+                    where a."gameId" = $2 and a."playerId" <> $1
+                ) a2 on a2."questionId" = a."questionId" 
+                where 
+                a."gameId" = $2 and 
+                a."playerId" = $1
+            ) as t2
+            `,
+                [currentPlayerId, gameId],
+            );
+            await queryRunner.commitTransaction();
+            return answersCount[0];
+        } catch (e) {
+            await queryRunner.rollbackTransaction();
+            return null;
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
     async getCountCorrectAnswers(
         playerId: string,
         gameId: string,

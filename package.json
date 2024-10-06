@@ -22,7 +22,8 @@
     "migrations:run": "typeorm-ts-node-commonjs migration:run -d ./src/db/data-source.ts",
     "migrations:revert": "typeorm-ts-node-commonjs migration:revert -d ./src/db/data-source.ts",
     "migrations:generate": "node ./src/db/tools/add-migration.js",
-    "ngrok up": "ngrok http http://localhost:4000"
+    "ngrok up": "ngrok http http://localhost:4000",
+    "localhost:run": "ssh -R 80:localhost:4000 nokey@localhost.run"
 
   },
   "dependencies": {
