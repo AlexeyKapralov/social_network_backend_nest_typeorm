@@ -144,20 +144,23 @@ export class CreateAnswerUseCase
                 activeGame.id,
             );
 
-        //если он еще не ответил на все вопросы, то этому игроку плюс бал
-        if (
-            anotherPlayerCountAnswers !== 5 &&
-            currentPlayerCountAnswers === 5 &&
-            currentPlayerCountCorrectAnswers > 0
-        ) {
-            await this.quizRepository.addScore(player.id);
-        }
-
         if (
             anotherPlayerCountAnswers === 5 &&
             currentPlayerCountAnswers === 5
         ) {
             await this.quizRepository.finishGame(activeGame.id);
+
+            //если он еще не ответил на все вопросы, то этому игроку плюс бал
+            const isCurrentUserFasterThanAnotherPlayer =
+                await this.quizRepository.checkIsLastAnswerFasterAnotherPLayer(
+                    player.id,
+                    game.id,
+                );
+            if (isCurrentUserFasterThanAnotherPlayer) {
+                await this.quizRepository.addScore(player.id);
+            } else {
+                await this.quizRepository.addScore(anotherPlayerId);
+            }
         }
 
         const mappedAnswer: AnswerViewDto = await this.answerRepo

@@ -16,7 +16,7 @@ import { Answer } from '../../../src/features/quiz/domain/answer.entity';
 import { Player } from '../../../src/features/quiz/domain/player.entity';
 import { Game } from '../../../src/features/quiz/domain/game.entity';
 
-describe('Quiz service integration tests', () => {
+describe('Quiz service integration tests quiz check create fifth answer in same time', () => {
     let app: NestExpressApplication;
     let quizService: QuizService;
     let dataSource: DataSource;
@@ -59,6 +59,7 @@ describe('Quiz service integration tests', () => {
             END $$;
         `);
 
+        //создать пять вопросов
         await dataSource.query(`
             INSERT INTO public.question
             (id, body, answers, published, "createdAt")
@@ -103,7 +104,8 @@ describe('Quiz service integration tests', () => {
             VALUES('login2', 'password', 'email', '2024-08-10 11:07:54.927', '1234', true, '2024-08-10 11:07:54.927')
             RETURNING id;
         `);
-        expect.setState({ userId: user2[0].id });
+
+        expect.setState({ userId1: user2[0].id });
         expect.setState({ userId2: user1[0].id });
 
         const result = await quizService.createConnection(user1[0].id);
@@ -144,15 +146,15 @@ describe('Quiz service integration tests', () => {
     });
 
     it('should join to exists connection', async () => {
-        const { userId } = expect.getState();
+        const { userId1 } = expect.getState();
 
         const users = await dataSource.query(`
             SELECT * FROM public.user
-            WHERE id = '${userId}'
+            WHERE id = '${userId1}'
         `);
         expect(users.length).toBe(1);
 
-        const result = await quizService.createConnection(userId);
+        const result = await quizService.createConnection(userId1);
         expect(result.hasError()).toBeFalsy();
 
         expect(result.data).toEqual({
@@ -196,7 +198,7 @@ describe('Quiz service integration tests', () => {
         const players = await dataSource.query(`
             SELECT id, score, "userId"
             FROM public.player
-            WHERE "userId" = '${userId}'
+            WHERE "userId" = '${userId1}'
         `);
         expect(players.length).toBe(1);
 
@@ -208,136 +210,195 @@ describe('Quiz service integration tests', () => {
         expect(game[0].player_2_id).toBe(players[0].id);
     });
 
-    it(`user can't join if he already play in an active game`, async () => {
-        const { userId } = expect.getState();
-
-        const users = await dataSource.query(`
-            SELECT * FROM public.user WHERE id = '${userId}'
-        `);
-        expect(users.length).toBe(1);
-
-        const result = await quizService.createConnection(userId);
-        expect(result.hasError()).toBeTruthy();
-
-        expect(result.extensions[0]).toEqual({
-            message: 'user is already participating in active pair',
-            key: 'user',
-            code: InterlayerStatuses.FORBIDDEN,
-        });
-    });
-
-    it(`should create answer of first question`, async () => {
-        const { userId } = expect.getState();
-        const createAnswerCommand = new CreateAnswerCommand(userId, {
+    it(`should create answers from first user of four questions`, async () => {
+        const { userId1 } = expect.getState();
+        const createAnswerCommand = new CreateAnswerCommand(userId1, {
             answer: 'correct answer',
+        });
+        const createIncorrectAnswerCommand = new CreateAnswerCommand(userId1, {
+            answer: 'incorrect answer',
         });
         const createAnswerInterlayer =
             await createAnswerHandler.execute(createAnswerCommand);
+        await createAnswerHandler.execute(createIncorrectAnswerCommand);
+        await createAnswerHandler.execute(createAnswerCommand);
+        await createAnswerHandler.execute(createAnswerCommand);
 
         const answer = await dataSource.query(`
             SELECT status, "gameId"
             FROM public.answer
+            ORDER BY "createdAt" ASC
         `);
 
         const player: Player[] = await dataSource.query(`
             SELECT *
             FROM public.player
-            WHERE "gameId" = '${answer[0].gameId}' AND "userId" = '${userId}'
+            WHERE "gameId" = '${answer[0].gameId}' AND "userId" = '${userId1}'
         `);
 
-        expect(answer.length).toBe(1);
+        expect(answer.length).toBe(4);
         expect(answer[0].status).toEqual(AnswerStatusesEnum.Correct);
+        expect(answer[1].status).toEqual(AnswerStatusesEnum.Incorrect);
         expect(createAnswerInterlayer.data.answerStatus).toEqual(
             AnswerStatusesEnum.Correct,
         );
-        expect(player[0].score).toBe(1);
+        expect(player[0].score).toBe(3);
     });
 
-    it(`shouldn't create answer with incorrect answer`, async () => {
-        const { userId } = expect.getState();
-        const createAnswerCommand = new CreateAnswerCommand(userId, {
+    it(`should create answers from second user of four questions`, async () => {
+        const { userId2 } = expect.getState();
+        const createAnswerCommand = new CreateAnswerCommand(userId2, {
+            answer: 'correct answer',
+        });
+        const createIncorrectAnswerCommand = new CreateAnswerCommand(userId2, {
             answer: 'incorrect answer',
         });
-        const createAnswerInterlayer =
-            await createAnswerHandler.execute(createAnswerCommand);
+        await createAnswerHandler.execute(createIncorrectAnswerCommand);
+        await createAnswerHandler.execute(createIncorrectAnswerCommand);
+        await createAnswerHandler.execute(createAnswerCommand);
+        await createAnswerHandler.execute(createAnswerCommand);
 
-        const answer: Answer[] = await dataSource.query(`
+        const answer = await dataSource.query(
+            `
+            SELECT status, a."gameId"
+            FROM public.answer a
+            LEFT JOIN public.player p ON p.id = a."playerId"
+            WHERE p."userId" = $1
+            ORDER BY "createdAt" ASC
+        `,
+            [userId2],
+        );
+
+        const player: Player[] = await dataSource.query(`
             SELECT *
-            FROM public.answer
-            ORDER BY "createdAt" DESC
+            FROM public.player
+            WHERE "gameId" = '${answer[0].gameId}' AND "userId" = '${userId2}'
         `);
-        expect(answer.length).toBe(2);
+
+        expect(answer.length).toBe(4);
         expect(answer[0].status).toEqual(AnswerStatusesEnum.Incorrect);
-        expect(createAnswerInterlayer.data.answerStatus).toEqual(
-            AnswerStatusesEnum.Incorrect,
-        );
+        expect(answer[1].status).toEqual(AnswerStatusesEnum.Incorrect);
+        expect(player[0].score).toBe(2);
     });
 
-    it(`shouldn't create answer if player answers already five questions`, async () => {
-        const { userId } = expect.getState();
-        const createAnswerCommand = new CreateAnswerCommand(userId, {
-            answer: 'correct answer',
-        });
-        for (let i = 0; i <= 4; i++) {
-            const createAnswerInterlayer =
-                await createAnswerHandler.execute(createAnswerCommand);
-            if (i === 4) {
-                expect(createAnswerInterlayer.extensions[0].message).toBe(
-                    'user already answers of 5 questions',
-                );
-            }
-        }
-
-        const answer: Answer[] = await dataSource.query(`
-            SELECT *
-            FROM public.answer
-        `);
-        expect(answer.length).toBe(5);
-    });
-
-    it(`should change status game in finished if both players answer 5 questions`, async () => {
+    it(`should create fifth answer from first and second player at the same time`, async () => {
+        const { userId1 } = expect.getState();
         const { userId2 } = expect.getState();
-        const createAnswerCommand = new CreateAnswerCommand(userId2, {
+        const createIncorrectAnswerCommand = new CreateAnswerCommand(userId1, {
+            answer: 'incorrect answer',
+        });
+        const createCorrectAnswerCommand = new CreateAnswerCommand(userId2, {
             answer: 'correct answer',
         });
-        for (let i = 0; i <= 4; i++) {
-            const createAnswerInterlayer =
-                await createAnswerHandler.execute(createAnswerCommand);
-        }
+        await createAnswerHandler.execute(createIncorrectAnswerCommand);
+        await createAnswerHandler.execute(createCorrectAnswerCommand);
 
-        const game: Game[] = await dataSource.query(`
-            SELECT *
-            FROM public.game
-        `);
-        expect(game[0].status).toBe(GameStatuses.Finished);
-        expect(game[0].finishedAt.toISOString()).toEqual(
-            expect.stringMatching(
-                /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
-            ),
+        const answer = await dataSource.query(
+            `
+            SELECT status, a."gameId"
+            FROM public.answer a
+            LEFT JOIN public.player p ON p.id = a."playerId"
+            WHERE p."userId" = $1
+            ORDER BY "createdAt" DESC
+        `,
+            [userId1],
         );
-        expect.setState({ gameId: game[0].id });
+
+        const player: Player[] = await dataSource.query(`
+            SELECT *
+            FROM public.player
+            WHERE "gameId" = '${answer[0].gameId}' AND "userId" = '${userId1}'
+        `);
+
+        expect(answer[0].status).toEqual(AnswerStatusesEnum.Incorrect);
+        expect(player[0].score).toBe(4);
     });
 
-    it(`should get game by id`, async () => {
-        const { userId2 } = expect.getState();
-
-        const createAnswerCommand = new CreateAnswerCommand(userId2, {
-            answer: 'correct answer',
-        });
-        for (let i = 0; i <= 4; i++) {
-            const createAnswerInterlayer =
-                await createAnswerHandler.execute(createAnswerCommand);
-        }
-
-        const game: Game[] = await dataSource.query(`
-            SELECT *
-            FROM public.game
-        `);
-        expect(game[0].status).toBe(GameStatuses.Finished);
-        expect(game[0].finishedAt.toISOString()).toEqual(
-            expect.stringMatching(
-                /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
-            ),
-        );
-    });
+    // it(`shouldn't create answer with incorrect answer`, async () => {
+    //     const { userId } = expect.getState();
+    //     const createAnswerCommand = new CreateAnswerCommand(userId, {
+    //         answer: 'incorrect answer',
+    //     });
+    //     const createAnswerInterlayer =
+    //         await createAnswerHandler.execute(createAnswerCommand);
+    //
+    //     const answer: Answer[] = await dataSource.query(`
+    //         SELECT *
+    //         FROM public.answer
+    //         ORDER BY "createdAt" DESC
+    //     `);
+    //     expect(answer.length).toBe(2);
+    //     expect(answer[0].status).toEqual(AnswerStatusesEnum.Incorrect);
+    //     expect(createAnswerInterlayer.data.answerStatus).toEqual(
+    //         AnswerStatusesEnum.Incorrect,
+    //     );
+    // });
+    //
+    // it(`shouldn't create answer if player answers already five questions`, async () => {
+    //     const { userId } = expect.getState();
+    //     const createAnswerCommand = new CreateAnswerCommand(userId, {
+    //         answer: 'correct answer',
+    //     });
+    //     for (let i = 0; i <= 4; i++) {
+    //         const createAnswerInterlayer =
+    //             await createAnswerHandler.execute(createAnswerCommand);
+    //         if (i === 4) {
+    //             expect(createAnswerInterlayer.extensions[0].message).toBe(
+    //                 'user already answers of 5 questions',
+    //             );
+    //         }
+    //     }
+    //
+    //     const answer: Answer[] = await dataSource.query(`
+    //         SELECT *
+    //         FROM public.answer
+    //     `);
+    //     expect(answer.length).toBe(5);
+    // });
+    //
+    // it(`should change status game in finished if both players answer 5 questions`, async () => {
+    //     const { userId2 } = expect.getState();
+    //     const createAnswerCommand = new CreateAnswerCommand(userId2, {
+    //         answer: 'correct answer',
+    //     });
+    //     for (let i = 0; i <= 4; i++) {
+    //         const createAnswerInterlayer =
+    //             await createAnswerHandler.execute(createAnswerCommand);
+    //     }
+    //
+    //     const game: Game[] = await dataSource.query(`
+    //         SELECT *
+    //         FROM public.game
+    //     `);
+    //     expect(game[0].status).toBe(GameStatuses.Finished);
+    //     expect(game[0].finishedAt.toISOString()).toEqual(
+    //         expect.stringMatching(
+    //             /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
+    //         ),
+    //     );
+    //     expect.setState({ gameId: game[0].id });
+    // });
+    //
+    // it(`should get game by id`, async () => {
+    //     const { userId2 } = expect.getState();
+    //
+    //     const createAnswerCommand = new CreateAnswerCommand(userId2, {
+    //         answer: 'correct answer',
+    //     });
+    //     for (let i = 0; i <= 4; i++) {
+    //         const createAnswerInterlayer =
+    //             await createAnswerHandler.execute(createAnswerCommand);
+    //     }
+    //
+    //     const game: Game[] = await dataSource.query(`
+    //         SELECT *
+    //         FROM public.game
+    //     `);
+    //     expect(game[0].status).toBe(GameStatuses.Finished);
+    //     expect(game[0].finishedAt.toISOString()).toEqual(
+    //         expect.stringMatching(
+    //             /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
+    //         ),
+    //     );
+    // });
 });

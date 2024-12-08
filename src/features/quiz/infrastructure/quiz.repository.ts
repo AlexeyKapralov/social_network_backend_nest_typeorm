@@ -278,7 +278,7 @@ export class QuizRepository {
         const queryRunner = this.dataSource.createQueryRunner();
 
         await queryRunner.connect();
-        await queryRunner.startTransaction();
+        await queryRunner.startTransaction('READ COMMITTED');
 
         try {
             // создать игру
@@ -629,13 +629,10 @@ export class QuizRepository {
         }
     }
 
-    async checkIsAllAnswersFasterAnotherPLayer(
+    async checkIsLastAnswerFasterAnotherPLayer(
         currentPlayerId: string,
         gameId: string,
-    ): Promise<{
-        currentIsFaster: boolean;
-        anotherIsFaster: boolean;
-    } | null> {
+    ): Promise<boolean> {
         const queryRunner = this.dataSource.createQueryRunner();
 
         await queryRunner.connect();
@@ -643,37 +640,36 @@ export class QuizRepository {
 
         try {
             const answerRepository = queryRunner.manager.getRepository(Answer);
-            const answersCount: Array<{
-                currentIsFaster: boolean;
-                anotherIsFaster: boolean;
-            }> = await answerRepository.query(
-                `
-            select bool_and(t2.currentIsFaster) "currentIsFaster", bool_and(t2.anotherIsFaster) "anotherIsFaster" from 
-            (
-                SELECT 
-                    CASE 
-                        WHEN a."createdAt" < a2."createdAt" or a2."createdAt" is null THEN true
-                        ELSE false 
-                    END AS currentIsFaster,
-                    CASE 
-                        WHEN a."createdAt" > a2."createdAt" THEN true
-                        ELSE false 
-                    END AS anotherIsFaster
-                from answer a
-                left join (
-                    --another player
-                    SELECT * from answer a
-                    where a."gameId" = $2 and a."playerId" <> $1
-                ) a2 on a2."questionId" = a."questionId" 
-                where 
-                a."gameId" = $2 and 
-                a."playerId" = $1
-            ) as t2
-            `,
-                [currentPlayerId, gameId],
-            );
+            const dates: { createdAt: Date; id: string }[] =
+                await answerRepository.find({
+                    where: {
+                        game: {
+                            id: gameId,
+                        },
+                    },
+                    select: {
+                        createdAt: true,
+                        id: true,
+                    },
+                    order: {
+                        createdAt: 'asc',
+                    },
+                    take: 2,
+                });
+            let createdAtCurrentUser: Date;
+            let createdAtAnotherUser: Date;
+
+            dates.map((date) => {
+                if (date.id === currentPlayerId) {
+                    createdAtCurrentUser = date.createdAt;
+                } else {
+                    createdAtAnotherUser = date.createdAt;
+                }
+            });
+
             await queryRunner.commitTransaction();
-            return answersCount[0];
+
+            return createdAtCurrentUser < createdAtAnotherUser;
         } catch (e) {
             await queryRunner.rollbackTransaction();
             return null;
@@ -781,11 +777,18 @@ export class QuizRepository {
 
         try {
             const playerRepository = queryRunner.manager.getRepository(Player);
+            // const player = await playerRepository
+            //     .createQueryBuilder('player')
+            //     .where('id = :playerId', { playerId: playerId })
+            //     .setLock('pessimistic_write')
+            //     .getOne();
+
             const player = await playerRepository.findOne({
                 where: {
                     id: playerId,
                 },
             });
+
             player.score++;
             await playerRepository.save(player);
 

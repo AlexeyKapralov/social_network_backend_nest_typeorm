@@ -14,6 +14,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { CreateAnswerUseCase } from './application/usecases/create-answer.command';
 import { GetGameQuery } from './infrastructure/queries/get-game.query';
 import { UsersModule } from '../users/users-module';
+import { GetStatisticQuery } from './infrastructure/queries/get-my-statistic.query';
 
 @Module({
     imports: [
@@ -32,6 +33,7 @@ import { UsersModule } from '../users/users-module';
         QuizService,
         QuizRepository,
         GetQuestionsQuery,
+        GetStatisticQuery,
         GetGameQuery,
         CreateAnswerUseCase,
     ],

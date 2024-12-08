@@ -28,8 +28,15 @@ import {
     GetGamePayload,
     GetGameResultType,
 } from '../infrastructure/queries/get-game.query';
+import {
+    GetStatisticPayload,
+    GetStatisticResultType,
+} from '../infrastructure/queries/get-my-statistic.query';
 
-@Controller('pair-game-quiz/pairs')
+const PREFIX_PAIRS = 'pairs';
+const PREFIX_USERS = 'users';
+
+@Controller(`pair-game-quiz`)
 export class QuizController {
     constructor(
         private quizService: QuizService,
@@ -38,7 +45,7 @@ export class QuizController {
     ) {}
 
     @UseGuards(JwtAuthGuard)
-    @Post('connection')
+    @Post(`${PREFIX_PAIRS}/connection`)
     @HttpCode(HttpStatus.OK)
     async connection(@Req() req: any) {
         const accessTokenPayload: AccessTokenPayloadDto = req.user.payload;
@@ -56,7 +63,7 @@ export class QuizController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Post('my-current/answers')
+    @Post(`${PREFIX_PAIRS}/my-current/answers`)
     @HttpCode(HttpStatus.OK)
     async createAnswer(
         @Req() req: any,
@@ -84,7 +91,7 @@ export class QuizController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get('my-current')
+    @Get(`${PREFIX_PAIRS}/my-current`)
     async getCurrentUnfinishedGame(@Req() req: any) {
         const accessTokenPayload: AccessTokenPayloadDto = req.user.payload;
         if (!accessTokenPayload.userId) {
@@ -115,7 +122,7 @@ export class QuizController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get(':gameId')
+    @Get(`${PREFIX_PAIRS}/:gameId`)
     async getGameById(
         @Param('gameId', ParseUUIDPipe) gameId: string,
         @Req() req: any,
@@ -133,6 +140,33 @@ export class QuizController {
         const gameInterlayer = await this.queryBus.execute<
             GetGamePayload,
             InterlayerNotice<GetGameResultType>
+        >(queryPayload);
+
+        if (gameInterlayer.hasError()) {
+            switch (gameInterlayer.extensions[0].code) {
+                case InterlayerStatuses.FORBIDDEN:
+                    throw new ForbiddenException();
+                case InterlayerStatuses.NOT_FOUND:
+                    throw new NotFoundException();
+            }
+        }
+
+        return gameInterlayer.data;
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get(`${PREFIX_USERS}/my-statistic`)
+    async getMyStatistic(@Req() req: any) {
+        const accessTokenPayload: AccessTokenPayloadDto = req.user.payload;
+        if (!accessTokenPayload.userId) {
+            throw new UnauthorizedException();
+        }
+
+        const queryPayload = new GetStatisticPayload(accessTokenPayload);
+
+        const gameInterlayer = await this.queryBus.execute<
+            GetStatisticPayload,
+            InterlayerNotice<GetStatisticResultType>
         >(queryPayload);
 
         if (gameInterlayer.hasError()) {
