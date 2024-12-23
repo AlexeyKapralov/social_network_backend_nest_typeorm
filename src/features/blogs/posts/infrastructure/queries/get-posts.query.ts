@@ -2,7 +2,7 @@ import { IQuery, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { PaginatorDto } from '../../../../../common/dto/paginator-dto';
-import { QueryDtoBase } from '../../../../../common/dto/query-dto';
+import { QueryDto } from '../../../../../common/dto/query-dto';
 import { Post } from '../../domain/posts.entity';
 import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
@@ -11,7 +11,7 @@ import { BlogsQueryRepository } from '../../../blogs/infrastructure/blogs-query-
 
 export class GetPostsPayload implements IQuery {
     constructor(
-        public query: QueryDtoBase,
+        public query: QueryDto,
         public userId: string = '00000000-0000-0000-0000-000000000000',
     ) {}
 }

@@ -17,10 +17,7 @@ import {
 import { BlogPostInputDto } from './dto/input/blog-post-input.dto';
 import { BlogsService } from '../application/blogs-service';
 import { BlogsQueryRepository } from '../infrastructure/blogs-query-repository';
-import {
-    QueryDtoBase,
-    QueryDtoWithName,
-} from '../../../../common/dto/query-dto';
+import { QueryDto, QueryDtoWithName } from '../../../../common/dto/query-dto';
 import { GetBlogsPayload } from '../infrastructure/queries/get-blogs-query';
 import { InterlayerNotice } from '../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../common/dto/paginator-dto';
@@ -116,7 +113,7 @@ export class BlogsSaController {
     @HttpCode(HttpStatus.OK)
     async getPostsForBlog(
         @Param('blogId', ParseUUIDPipe) blogId: string,
-        @Query() query: QueryDtoBase,
+        @Query() query: QueryDto,
     ) {
         const queryPayload = new GetPostsForBlogPayload(query, blogId);
         const posts = await this.queryBus.execute<

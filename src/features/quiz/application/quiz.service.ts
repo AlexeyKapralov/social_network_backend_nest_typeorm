@@ -30,6 +30,7 @@ export class QuizService {
         // существует ли юзер
         const user = await this.usersRepository.findUser(userId);
         if (!user) {
+            console.log('user is no exist', userId);
             notice.addError(
                 'user is not exists',
                 'userId',
@@ -42,6 +43,7 @@ export class QuizService {
         const isTakePart =
             await this.quizRepository.checkIsUserTakePartInGame(userId);
         if (isTakePart) {
+            console.log('user is already participating in active pair');
             notice.addError(
                 'user is already participating in active pair',
                 'user',
@@ -53,6 +55,7 @@ export class QuizService {
         //проверить существуют ли вопросы вообще
         let questionsTotal = await this.quizRepository.getTotalCountQuestions();
         if (!questionsTotal) {
+            console.log('questions was not created');
             notice.addError(
                 'questions was not created',
                 'questions',

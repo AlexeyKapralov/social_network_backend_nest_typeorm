@@ -3,7 +3,6 @@ import {
     Body,
     Controller,
     Delete,
-    ForbiddenException,
     Get,
     HttpCode,
     HttpStatus,
@@ -14,11 +13,8 @@ import {
     Put,
     Query,
     Req,
-    UnauthorizedException,
     UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/auth/guards/jwt-auth-guard';
-import { AccessTokenPayloadDto } from '../../../common/dto/access-token-payload-dto';
 import { QuizService } from '../application/quiz.service';
 import { QuestionInputDto } from './dto/input/question-input.dto';
 import { BasicAuthGuard } from '../../auth/auth/guards/basic-auth-guard';

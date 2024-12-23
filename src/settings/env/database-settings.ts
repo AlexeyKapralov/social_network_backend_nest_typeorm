@@ -7,7 +7,7 @@ export class DatabaseSettings {
     @IsString()
     POSTGRESQL_TEST_DB_NAME = this.environmentVariable.POSTGRESQL_TEST_DB_NAME;
     @IsString()
-    POSTGRESQL_DB_NAME = this.environmentVariable.POSTGRESQL_DB_NAME;
+    POSTGRES_DB_NAME = this.environmentVariable.POSTGRES_DB_NAME;
     @IsString()
     POSTGRES_USER = this.environmentVariable.POSTGRES_USER;
     @IsString()

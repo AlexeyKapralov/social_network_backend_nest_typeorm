@@ -45,7 +45,7 @@ import { Question } from './features/quiz/domain/question.entity';
 
                 const database = environmentSettings.isTesting
                     ? databaseSettings.POSTGRESQL_TEST_DB_NAME
-                    : databaseSettings.POSTGRESQL_DB_NAME;
+                    : databaseSettings.POSTGRES_DB_NAME;
 
                 const isTesting = environmentSettings.isTesting;
 

@@ -7,7 +7,7 @@ export default new DataSource({
     host: 'localhost', //'127.0.0.1',
     username: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
-    database: process.env.POSTGRESQL_DB_NAME,
+    database: process.env.POSTGRES_DB_NAME,
     port: 5432,
     synchronize: false,
     entities: [`src/**/*entity{.ts,.js}`],

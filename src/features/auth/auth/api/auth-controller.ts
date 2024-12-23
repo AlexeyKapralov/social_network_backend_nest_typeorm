@@ -15,12 +15,11 @@ import {
 } from '@nestjs/common';
 import { UserInputDto } from '../../../users/api/dto/input/user-input-dto';
 import { AuthService } from '../application/auth-service';
-import { ThrottlerBehindProxyGuard } from '../guards/throttle-behind-proxy';
 import { RegistrationEmailResendingDto } from './dto/input/registration-email-resending-dto';
 import { RegistrationConfirmationCodeDto } from './dto/input/registration-confirmation-code-dto';
 import { NewPasswordRecoveryInputDto } from './dto/input/new-password-recovery-input-dto';
 import { LoginInputDto } from './dto/input/login-input-dto';
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import { RefreshTokenPayloadDto } from '../../../../common/dto/refresh-token-payload-dto';
 import {
     RefreshTokensCommand,
@@ -31,7 +30,6 @@ import { CommandBus } from '@nestjs/cqrs';
 import { JwtAuthGuard } from '../guards/jwt-auth-guard';
 import { AccessTokenPayloadDto } from '../../../../common/dto/access-token-payload-dto';
 import { UsersQueryRepository } from '../../../users/infrastructure/users-query-repository';
-import { MeViewDto } from './dto/output/me-view-dto';
 
 // @UseGuards(ThrottlerBehindProxyGuard)
 @Controller('auth')

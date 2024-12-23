@@ -1,7 +1,6 @@
 import { IQuery, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { InterlayerNotice } from '../../../../base/models/interlayer';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Question } from '../../domain/question.entity';
 import { Repository } from 'typeorm';
 import { AccessTokenPayloadDto } from '../../../../common/dto/access-token-payload-dto';
 import { MyStatisticViewDto } from '../../api/dto/output/my-statistic-view.dto';
@@ -21,7 +20,8 @@ export class GetStatisticQuery
         >
 {
     constructor(
-        @InjectRepository(Player) private playerRepo: Repository<Player>,
+        @InjectRepository(Player)
+        private readonly playerRepo: Repository<Player>,
     ) {}
 
     async execute(
@@ -85,73 +85,6 @@ export class GetStatisticQuery
         });
 
         return notice;
-
-        //
-        // const questionsQuery = this.questionRepo
-        //     .createQueryBuilder('q')
-        //     .select([
-        //         'q.id',
-        //         'q.body',
-        //         'q.answers',
-        //         'q.published',
-        //         'q.createdAt',
-        //         'q.updatedAt',
-        //     ])
-        //     .orderBy(
-        //         `"${query.queryDtoForQuiz.sortBy === 'createdAt' ? `q"."createdAt` : query.queryDtoForQuiz.sortBy}"`,
-        //         query.queryDtoForQuiz.sortDirection,
-        //     );
-        //
-        // //фильтр для поля published
-        // if (
-        //     query.queryDtoForQuiz.publishedStatus === PublishedStatus.published
-        // ) {
-        //     questionsQuery.andWhere('q."published" = :publishedStatus', {
-        //         publishedStatus: true,
-        //     });
-        // }
-        // if (
-        //     query.queryDtoForQuiz.publishedStatus ===
-        //     PublishedStatus.notPublished
-        // ) {
-        //     questionsQuery.andWhere('q.published = :publishedStatus', {
-        //         publishedStatus: false,
-        //     });
-        // }
-        //
-        // //обработка для bodySearchTerm
-        // if (query.queryDtoForQuiz.bodySearchTerm) {
-        //     questionsQuery.andWhere('q.body like :body', {
-        //         body: `%${query.queryDtoForQuiz.bodySearchTerm}%`,
-        //     });
-        // }
-        //
-        // //пагинация
-        // const countQuestions = await questionsQuery.getCount();
-        // questionsQuery.take(query.queryDtoForQuiz.pageSize);
-        // questionsQuery.skip(
-        //     (query.queryDtoForQuiz.pageNumber - 1) *
-        //         query.queryDtoForQuiz.pageSize,
-        // );
-        //
-        // const questions = await questionsQuery.getMany();
-        // const mappedQuestions: QuestionViewDto[] = [];
-        // questions.map((q) => {
-        //     mappedQuestions.push(questionViewMapper(q));
-        // });
-        //
-        // const result: PaginatorDto<QuestionViewDto> = {
-        //     pagesCount: Math.ceil(
-        //         countQuestions / query.queryDtoForQuiz.pageSize,
-        //     ),
-        //     pageSize: query.queryDtoForQuiz.pageSize,
-        //     page: query.queryDtoForQuiz.pageNumber,
-        //     totalCount: countQuestions,
-        //     items: mappedQuestions,
-        // };
-        //
-        // notice.addData(result);
-        // return notice;
     }
 }
 

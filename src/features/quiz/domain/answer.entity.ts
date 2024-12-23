@@ -1,11 +1,9 @@
 import {
     BaseEntity,
     Column,
-    DeleteDateColumn,
     Entity,
     JoinColumn,
     ManyToOne,
-    OneToMany,
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Question } from './question.entity';

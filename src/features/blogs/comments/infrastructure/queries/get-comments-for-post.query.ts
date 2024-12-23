@@ -5,12 +5,12 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
-import { QueryDtoBase } from '../../../../../common/dto/query-dto';
+import { QueryDto } from '../../../../../common/dto/query-dto';
 import { PaginatorDto } from '../../../../../common/dto/paginator-dto';
 
 export class GetCommentsForPostPayload implements IQuery {
     constructor(
-        public query: QueryDtoBase,
+        public query: QueryDto,
         public postId: string,
         public userId: string = null,
     ) {}

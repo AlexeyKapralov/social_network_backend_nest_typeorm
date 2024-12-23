@@ -14,7 +14,7 @@ import {
     UnauthorizedException,
     UseGuards,
 } from '@nestjs/common';
-import { QueryDtoBase } from '../../../../common/dto/query-dto';
+import { QueryDto } from '../../../../common/dto/query-dto';
 import { ValidateJwtGuard } from '../../../auth/auth/guards/validate-jwt-guard';
 import {
     GetPostsPayload,
@@ -70,7 +70,7 @@ export class PostsController {
 
     @UseGuards(ValidateJwtGuard)
     @Get()
-    async findPosts(@Req() req: any, @Query() query: QueryDtoBase) {
+    async findPosts(@Req() req: any, @Query() query: QueryDto) {
         let userId: string;
         if (req.user) {
             if (req.user.userId) {
@@ -114,7 +114,7 @@ export class PostsController {
     async getCommentsForPost(
         @Req() req: any,
         @Param('postId', ParseUUIDPipe) postId: string,
-        @Query() query: QueryDtoBase,
+        @Query() query: QueryDto,
     ) {
         let userId: string;
         if (req.user) {

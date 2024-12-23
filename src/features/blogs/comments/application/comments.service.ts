@@ -17,7 +17,7 @@ import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { User } from '../../../users/domain/user-entity';
 import { Post } from '../../posts/domain/posts.entity';
-import { QueryDtoBase } from '../../../../common/dto/query-dto';
+import { QueryDto } from '../../../../common/dto/query-dto';
 import {
     GetCommentsForPostPayload,
     GetCommentsForPostResultType,
@@ -102,7 +102,7 @@ export class CommentsService {
     }
 
     async findComments(
-        query: QueryDtoBase,
+        query: QueryDto,
         postId: string,
         userId?: string,
     ): Promise<InterlayerNotice<PaginatorDto<CommentsViewDto> | null>> {
