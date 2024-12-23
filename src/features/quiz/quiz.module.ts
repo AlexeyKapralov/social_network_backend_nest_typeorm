@@ -15,6 +15,7 @@ import { CreateAnswerUseCase } from './application/usecases/create-answer.comman
 import { GetGameQuery } from './infrastructure/queries/get-game.query';
 import { UsersModule } from '../users/users-module';
 import { GetStatisticQuery } from './infrastructure/queries/get-my-statistic.query';
+import { GetAllMyGamesQuery } from './infrastructure/queries/get-all-my-games.query';
 
 @Module({
     imports: [
@@ -34,6 +35,7 @@ import { GetStatisticQuery } from './infrastructure/queries/get-my-statistic.que
         QuizRepository,
         GetQuestionsQuery,
         GetStatisticQuery,
+        GetAllMyGamesQuery,
         GetGameQuery,
         CreateAnswerUseCase,
     ],

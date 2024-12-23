@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, Like, MoreThan } from 'typeorm';
+import { DataSource, MoreThan } from 'typeorm';
 import { User } from '../domain/user-entity';
 import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
 import { UserViewDto } from '../api/dto/output/user-view-dto';
@@ -8,7 +8,7 @@ import { toUserViewDtoMapper } from '../../../base/mappers/user-view-mapper';
 
 @Injectable()
 export class UsersQueryRepository {
-    constructor(@InjectDataSource() private dataSource: DataSource) {}
+    constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
     async findUserByEmail(email: string): Promise<User> {
         const userRepository = this.dataSource.getRepository(User);

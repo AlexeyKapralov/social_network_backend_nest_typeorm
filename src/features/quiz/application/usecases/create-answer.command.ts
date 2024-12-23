@@ -42,6 +42,7 @@ export class CreateAnswerUseCase
         const isUserTakePartGame =
             await this.quizRepository.checkIsUserTakePartInGame(userId);
         if (!isUserTakePartGame) {
+            console.log('user is not found');
             notice.addError(
                 'user is not found',
                 'user',
@@ -143,6 +144,11 @@ export class CreateAnswerUseCase
                 player.id,
                 activeGame.id,
             );
+        const anotherPlayerCountCorrectAnswers =
+            await this.quizRepository.getCountCorrectAnswers(
+                anotherPlayerId,
+                activeGame.id,
+            );
 
         if (
             anotherPlayerCountAnswers === 5 &&
@@ -157,9 +163,11 @@ export class CreateAnswerUseCase
                     game.id,
                 );
             if (isCurrentUserFasterThanAnotherPlayer) {
-                await this.quizRepository.addScore(player.id);
+                if (currentPlayerCountCorrectAnswers > 0)
+                    await this.quizRepository.addScore(player.id);
             } else {
-                await this.quizRepository.addScore(anotherPlayerId);
+                if (anotherPlayerCountCorrectAnswers > 0)
+                    await this.quizRepository.addScore(anotherPlayerId);
             }
         }
 

@@ -8,7 +8,6 @@ import configuration, {
 import { UsersModule } from './features/users/users-module';
 import { PassportModule } from '@nestjs/passport';
 import { AuthModule } from './features/auth/auth-module';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { TestingModule } from './features/testing/testing-module';
 import BlogsModule from './features/blogs/blogs-module';
 import { Device } from './features/auth/devices/domain/device-entity';

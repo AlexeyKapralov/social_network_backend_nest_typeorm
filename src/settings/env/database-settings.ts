@@ -1,5 +1,5 @@
 import { EnvironmentVariable } from './env-settings';
-import { IsNumber, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class DatabaseSettings {
     constructor(private environmentVariable: EnvironmentVariable) {}

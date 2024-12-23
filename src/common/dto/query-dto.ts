@@ -1,14 +1,20 @@
 import { Transform, TransformFnParams, Type } from 'class-transformer';
-import { IsNumber, IsString, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsString, Min } from 'class-validator';
 
 export enum SortDirection {
     ASC = 'ASC',
     DESC = 'DESC',
 }
 
+export enum SortField {
+    id = 'id',
+    status = 'status',
+    pairCreatedDate = 'pairCreatedDate',
+    startGameDate = 'startGameDate',
+    finishGameDate = 'finishGameDate',
+}
+
 export class QueryDtoBase {
-    @IsString()
-    sortBy: string = 'createdAt';
     @Transform(({ value }: TransformFnParams) => {
         switch (value.toUpperCase()) {
             case SortDirection.ASC:
@@ -30,7 +36,18 @@ export class QueryDtoBase {
     pageSize: number = 10;
 }
 
-export class QueryDtoWithEmailLogin extends QueryDtoBase {
+export class QueryDto extends QueryDtoBase {
+    @IsString()
+    sortBy: string = 'createdAt';
+}
+
+export class QueryDtoForGetAllGames extends QueryDtoBase {
+    @IsString()
+    @IsEnum(SortField)
+    sortBy: SortField = SortField.pairCreatedDate;
+}
+
+export class QueryDtoWithEmailLogin extends QueryDto {
     // @Transform(({ value }: TransformFnParams) => {
     //     value.toUpperCase();
     // })
@@ -41,7 +58,7 @@ export class QueryDtoWithEmailLogin extends QueryDtoBase {
     searchLoginTerm: string = null;
 }
 
-export class QueryDtoWithName extends QueryDtoBase {
+export class QueryDtoWithName extends QueryDto {
     // @Transform(({ value }: TransformFnParams) => {
     //     value.toUpperCase();
     // })

@@ -74,13 +74,20 @@ export class QuizRepository {
         });
 
         const gamesIds = games.map((game: Game) => game.id);
+        if (!gamesIds.length) {
+            return false;
+        }
 
-        const players = await this.playerRepo.find({
-            where: {
-                game: { id: In([...gamesIds]) },
-                user: { id: userId },
-            },
-        });
+        const players = await this.playerRepo
+            .createQueryBuilder('player')
+            .leftJoinAndSelect('player.game', 'game') // Добавлено для получения данных об игре
+            .leftJoinAndSelect('player.user', 'user') // Добавлено для получения данных о пользователе
+            .where('player.user.id = :userId', { userId })
+            .andWhere('player.game.id IN (:...gamesIds)', { gamesIds })
+            .andWhere(
+                `(SELECT COUNT(*) FROM "answer" WHERE "playerId" = player.id AND "gameId" = game.id) < 5`,
+            )
+            .getMany();
 
         return players.length > 0;
     }
@@ -406,47 +413,37 @@ export class QuizRepository {
                     this.dataSource.getRepository(GameQuestion);
 
                 let iterator = 0;
-                const promises = questions.map(async (question) => {
+                const gameQuestions = questions.map((question) => {
                     const gameQuestion = new GameQuestion();
                     gameQuestion.index = iterator++;
                     gameQuestion.game = { id: gameId } as Game;
-                    gameQuestion.question = {
-                        id: question.id,
-                    } as Question;
-                    return await gameQuestionRepository.save(gameQuestion);
+                    gameQuestion.question = { id: question.id } as Question;
+                    return gameQuestion;
                 });
-                Promise.all(promises)
-                    .then((results) => {
-                        console.log(
-                            'Все асинхронные операции завершены:',
-                            results,
-                        );
-                    })
-                    .catch((error) => {
-                        console.error(
-                            'Ошибка при выполнении асинхронных операций:',
-                            error,
-                        );
-                    });
 
-                await queryRunner.commitTransaction();
-                return await this.gameRepo.findOne({
-                    where: {
-                        status: GameStatuses.Active,
-                        id: gameId,
-                    },
-                    relations: {
-                        gameQuestions: {
-                            question: true,
-                        },
-                    },
-                    order: {
-                        gameQuestions: { index: 'ASC' },
-                    },
-                });
+                await this.dataSource
+                    .createQueryBuilder()
+                    .insert()
+                    .into(GameQuestion)
+                    .values(gameQuestions)
+                    .execute();
             }
             await queryRunner.commitTransaction();
-            return null;
+            const game = await this.gameRepo.findOne({
+                where: {
+                    status: GameStatuses.Active,
+                    id: gameId,
+                },
+                relations: {
+                    gameQuestions: {
+                        question: true,
+                    },
+                },
+                order: {
+                    gameQuestions: { index: 'ASC' },
+                },
+            });
+            return game;
         } catch (e) {
             await queryRunner.rollbackTransaction();
             return null;
@@ -659,7 +656,7 @@ export class QuizRepository {
             let createdAtCurrentUser: Date;
             let createdAtAnotherUser: Date;
 
-            dates.map((date) => {
+            dates.forEach((date) => {
                 if (date.id === currentPlayerId) {
                     createdAtCurrentUser = date.createdAt;
                 } else {

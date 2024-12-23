@@ -9,6 +9,7 @@ import {
     Param,
     ParseUUIDPipe,
     Post,
+    Query,
     Req,
     UnauthorizedException,
     UseGuards,
@@ -32,6 +33,11 @@ import {
     GetStatisticPayload,
     GetStatisticResultType,
 } from '../infrastructure/queries/get-my-statistic.query';
+import {
+    GetAllMyGamesPayload,
+    GetMyAllGamesResultType,
+} from '../infrastructure/queries/get-all-my-games.query';
+import { QueryDtoForGetAllGames } from '../../../common/dto/query-dto';
 
 const PREFIX_PAIRS = 'pairs';
 const PREFIX_USERS = 'users';
@@ -45,6 +51,39 @@ export class QuizController {
     ) {}
 
     @UseGuards(JwtAuthGuard)
+    @Get(`${PREFIX_PAIRS}/my`)
+    async getAllMyGames(
+        @Req() req: any,
+        @Query() query: QueryDtoForGetAllGames,
+    ) {
+        const accessTokenPayload: AccessTokenPayloadDto = req.user.payload;
+        if (!accessTokenPayload.userId) {
+            throw new UnauthorizedException();
+        }
+
+        const queryPayload = new GetAllMyGamesPayload(
+            query,
+            accessTokenPayload.userId,
+        );
+
+        const allGamesInterlayer = await this.queryBus.execute<
+            GetAllMyGamesPayload,
+            InterlayerNotice<GetMyAllGamesResultType>
+        >(queryPayload);
+
+        if (allGamesInterlayer.hasError()) {
+            switch (allGamesInterlayer.extensions[0].code) {
+                case InterlayerStatuses.FORBIDDEN:
+                    throw new ForbiddenException();
+                case InterlayerStatuses.NOT_FOUND:
+                    throw new NotFoundException();
+            }
+        }
+
+        return allGamesInterlayer.data;
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Post(`${PREFIX_PAIRS}/connection`)
     @HttpCode(HttpStatus.OK)
     async connection(@Req() req: any) {
@@ -56,6 +95,10 @@ export class QuizController {
             await this.quizService.createConnection(accessTokenPayload.userId);
 
         if (createConnectionInterlayer.hasError()) {
+            console.log(
+                'createConnectionInterlayer.extensions[0].message',
+                createConnectionInterlayer.extensions[0].message,
+            );
             throw new ForbiddenException();
         }
 

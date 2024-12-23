@@ -23,7 +23,6 @@ export class GetPostsQuery
     constructor(
         @InjectRepository(Post) private postRepo: Repository<Post>,
         @InjectDataSource() private dataSource: DataSource,
-        private blogQueryRepository: BlogsQueryRepository,
     ) {}
 
     async execute(queryPayload: GetPostsPayload): Promise<GetPostsResultType> {
