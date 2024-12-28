@@ -54,6 +54,7 @@ export class GetAllMyGamesQuery
             },
             relations: ['game'],
         });
+        console.log('players', players);
 
         if (!players.length) {
             notice.addError(
@@ -66,6 +67,8 @@ export class GetAllMyGamesQuery
         const gameIds = players.map((g) => {
             return g.game.id;
         });
+        console.log('gameIds', gameIds);
+
         const gameIdsStr = gameIds.map((i) => `'${i}'`).join(',');
 
         //определение поля для сортировки
@@ -104,18 +107,25 @@ export class GetAllMyGamesQuery
                 'game.status',
                 'game.createdAt',
                 'game.startedAt',
+                'game.player_1_id',
+                'game.player_2_id',
                 'game.finishedAt',
                 'gameQuestions.id',
                 'question.body',
             ])
             .orderBy(sort, query.query.sortDirection);
 
+        console.log('baseGames', baseGames);
+
         const games = await baseGames
             .limit(query.query.pageSize)
             .skip((query.query.pageNumber - 1) * query.query.pageSize)
             .getMany();
 
+        console.log('games', games);
+
         const gamesCount = await baseGames.getCount();
+        console.log('gamesCount', gamesCount);
 
         //для них все answers
         //получение player 1
@@ -127,7 +137,7 @@ export class GetAllMyGamesQuery
                 a.status as "answerStatus",
                 a."createdAt" as "addedAt",
                 u.login,
-                p.id as "playerId",
+                u.id as "playerId",
                 p.score from game g
             left join player p on g.player_1_id = p.id
             left join answer a ON a."playerId" = p.id
@@ -135,6 +145,8 @@ export class GetAllMyGamesQuery
             WHERE g."id" IN (${gameIdsStr})
             `,
         );
+
+        console.log('gamesWithAnswersAndPlayers1', gamesWithAnswersAndPlayers1);
 
         //получение player 2
         const gamesWithAnswersAndPlayers2 = await this.dataSource.query(
@@ -145,7 +157,7 @@ export class GetAllMyGamesQuery
                 a.status as "answerStatus",
                 a."createdAt" as "addedAt",
                 u.login,
-                p.id as "playerId",
+                u.id as "playerId",
                 p.score from game g
             left join player p on g.player_2_id = p.id
             left join answer a ON a."playerId" = p.id
@@ -153,6 +165,7 @@ export class GetAllMyGamesQuery
             WHERE g."id" IN (${gameIdsStr})
             `,
         );
+        console.log('gamesWithAnswersAndPlayers2', gamesWithAnswersAndPlayers2);
 
         //для каждой game свои gameQuestion и по ним Question (id и body)
         const items = games.map((game) => {
@@ -163,18 +176,21 @@ export class GetAllMyGamesQuery
                 score: 0,
             };
             gamesWithAnswersAndPlayers1.map((el) => {
-                if (el.id === game.id && el.questionId) {
-                    const obj = {
-                        questionId: el.questionId,
-                        answerStatus: el.questionId,
-                        addedAt: el.addedAt,
-                    };
+                if (el.id === game.id) {
                     firstPlayerProgress.player = {
                         id: el.playerId,
                         login: el.login,
                     };
                     firstPlayerProgress.score = el.score;
-                    firstPlayerProgress.answers.push(obj);
+
+                    if (el.questionId) {
+                        const obj = {
+                            questionId: el.questionId,
+                            answerStatus: el.questionId,
+                            addedAt: el.addedAt,
+                        };
+                        firstPlayerProgress.answers.push(obj);
+                    }
                 }
             });
 
@@ -185,18 +201,20 @@ export class GetAllMyGamesQuery
                 score: 0,
             };
             gamesWithAnswersAndPlayers2.map((el) => {
-                if (el.id === game.id && el.questionId) {
-                    const obj = {
-                        questionId: el.questionId,
-                        answerStatus: el.questionId,
-                        addedAt: el.addedAt,
-                    };
+                if (el.id === game.id) {
                     secondPlayerProgress.player = {
                         id: el.playerId,
                         login: el.login,
                     };
                     secondPlayerProgress.score = el.score;
-                    secondPlayerProgress.answers.push(obj);
+                    if (el.questionId) {
+                        const obj = {
+                            questionId: el.questionId,
+                            answerStatus: el.questionId,
+                            addedAt: el.addedAt,
+                        };
+                        secondPlayerProgress.answers.push(obj);
+                    }
                 }
             });
 

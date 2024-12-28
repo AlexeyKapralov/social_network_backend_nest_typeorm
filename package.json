@@ -25,7 +25,6 @@
     "ngrok up": "ngrok http http://localhost:4000",
     "localhost:run": "ssh -R 80:localhost:4000 nokey@localhost.run",
     "serveo:run": "ssh -R 80:localhost:4000 serveo.net"
-
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
