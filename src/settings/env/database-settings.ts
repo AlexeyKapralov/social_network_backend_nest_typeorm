@@ -2,7 +2,7 @@ import { EnvironmentVariable } from './env-settings';
 import { IsString } from 'class-validator';
 
 export class DatabaseSettings {
-    constructor(private environmentVariable: EnvironmentVariable) {}
+    constructor(private readonly environmentVariable: EnvironmentVariable) {}
 
     @IsString()
     POSTGRESQL_TEST_DB_NAME = this.environmentVariable.POSTGRESQL_TEST_DB_NAME;

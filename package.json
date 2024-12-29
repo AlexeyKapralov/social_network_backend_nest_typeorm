@@ -24,7 +24,9 @@
     "migrations:generate": "node ./src/db/tools/add-migration.js",
     "ngrok up": "ngrok http http://localhost:4000",
     "localhost:run": "ssh -R 80:localhost:4000 nokey@localhost.run",
-    "serveo:run": "ssh -R 80:localhost:4000 serveo.net"
+    "serveo:run": "ssh -R 80:localhost:4000 serveo.net",
+    "serveo2:run": "ssh -R 0:localhost:4000 incubstudent@91.108.243.169",
+    "пароль1234serveo2:run": "пароль1234"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

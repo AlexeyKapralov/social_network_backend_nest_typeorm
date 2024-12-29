@@ -4,7 +4,7 @@ import {
     InterlayerStatuses,
 } from '../../../../base/models/interlayer';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Player } from '../../domain/player.entity';
 import { GamePairViewDto } from '../../api/dto/output/game-pair-view.dto';
 import { PaginatorDto } from '../../../../common/dto/paginator-dto';
@@ -64,15 +64,12 @@ export class GetAllMyGamesQuery
             );
             return notice;
         }
-        const gameIds = players.map((g) => {
+        let gameIds = players.map((g) => {
             return g.game.id;
         });
-        console.log('gameIds', gameIds);
-
-        const gameIdsStr = gameIds.map((i) => `'${i}'`).join(',');
 
         //определение поля для сортировки
-        let sort = null;
+        let sort: string = null;
         switch (query.query.sortBy) {
             case SortField.id: {
                 sort = 'game.id';
@@ -96,6 +93,26 @@ export class GetAllMyGamesQuery
             }
         }
 
+        //все games с пагинацией
+        const gamesWithPagination = await this.gameRepo.find({
+            where: {
+                id: In(gameIds),
+            },
+            select: {
+                id: true,
+            },
+            take: query.query.pageSize,
+            skip: (query.query.pageNumber - 1) * query.query.pageSize,
+            order: {
+                [query.query.sortBy]: query.query.sortDirection,
+                createdAt: 'DESC',
+            },
+        });
+        gameIds = gamesWithPagination.map((i) => i.id);
+        console.log('gameIds', gameIds);
+
+        const gameIdsStr = gameIds.map((i) => `'${i}'`).join(',');
+
         //основной запрос для игр
         const baseGames = this.gameRepo
             .createQueryBuilder('game')
@@ -113,14 +130,11 @@ export class GetAllMyGamesQuery
                 'gameQuestions.id',
                 'question.body',
             ])
-            .orderBy(sort, query.query.sortDirection);
+            .orderBy(sort, query.query.sortDirection)
+            .addOrderBy('game.createdAt', 'DESC')
+            .addOrderBy('gameQuestions.index', 'ASC');
 
-        console.log('baseGames', baseGames);
-
-        const games = await baseGames
-            .limit(query.query.pageSize)
-            .skip((query.query.pageNumber - 1) * query.query.pageSize)
-            .getMany();
+        const games = await baseGames.getMany();
 
         console.log('games', games);
 
@@ -133,7 +147,7 @@ export class GetAllMyGamesQuery
             `
             select
                 g.id,
-                a."questionId",
+                gq.id as "questionId",
                 a.status as "answerStatus",
                 a."createdAt" as "addedAt",
                 u.login,
@@ -142,8 +156,11 @@ export class GetAllMyGamesQuery
             left join player p on g.player_1_id = p.id
             left join answer a ON a."playerId" = p.id
             left join "user" u on u.id = p."userId"
+            left join "game_question" gq ON gq."gameId" = g.id and gq."questionId" = a."questionId"
             WHERE g."id" IN (${gameIdsStr})
+            ORDER BY $1, g."createdAt" DESC, gq.index ASC 
             `,
+            [`g.${query.query.sortBy} ${query.query.sortDirection}`],
         );
 
         console.log('gamesWithAnswersAndPlayers1', gamesWithAnswersAndPlayers1);
@@ -153,7 +170,7 @@ export class GetAllMyGamesQuery
             `
             select
                 g.id,
-                a."questionId",
+                gq.id as "questionId",
                 a.status as "answerStatus",
                 a."createdAt" as "addedAt",
                 u.login,
@@ -162,8 +179,11 @@ export class GetAllMyGamesQuery
             left join player p on g.player_2_id = p.id
             left join answer a ON a."playerId" = p.id
             left join "user" u on u.id = p."userId"
+            left join "game_question" gq ON gq."gameId" = g.id and gq."questionId" = a."questionId"
             WHERE g."id" IN (${gameIdsStr})
+            ORDER BY $1, g."createdAt" DESC, gq.index ASC
             `,
+            [`g.${query.query.sortBy} ${query.query.sortDirection}`],
         );
         console.log('gamesWithAnswersAndPlayers2', gamesWithAnswersAndPlayers2);
 
@@ -186,7 +206,7 @@ export class GetAllMyGamesQuery
                     if (el.questionId) {
                         const obj = {
                             questionId: el.questionId,
-                            answerStatus: el.questionId,
+                            answerStatus: el.answerStatus,
                             addedAt: el.addedAt,
                         };
                         firstPlayerProgress.answers.push(obj);
@@ -210,7 +230,7 @@ export class GetAllMyGamesQuery
                     if (el.questionId) {
                         const obj = {
                             questionId: el.questionId,
-                            answerStatus: el.questionId,
+                            answerStatus: el.answerStatus,
                             addedAt: el.addedAt,
                         };
                         secondPlayerProgress.answers.push(obj);

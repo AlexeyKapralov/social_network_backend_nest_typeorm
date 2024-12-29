@@ -30,7 +30,7 @@ export class QuizService {
         // существует ли юзер
         const user = await this.usersRepository.findUser(userId);
         if (!user) {
-            console.log('user is no exist', userId);
+            console.log('user is no exist or not confirmed', userId);
             notice.addError(
                 'user is not exists',
                 'userId',
