@@ -16,6 +16,8 @@ import { GetGameQuery } from './infrastructure/queries/get-game.query';
 import { UsersModule } from '../users/users-module';
 import { GetStatisticQuery } from './infrastructure/queries/get-my-statistic.query';
 import { GetAllMyGamesQuery } from './infrastructure/queries/get-all-my-games.query';
+import { GetTopPlayersQuery } from './infrastructure/queries/get-top-players.query';
+import { User } from '../users/domain/user-entity';
 
 @Module({
     imports: [
@@ -23,6 +25,7 @@ import { GetAllMyGamesQuery } from './infrastructure/queries/get-all-my-games.qu
         TypeOrmModule.forFeature([
             Answer,
             Game,
+            User,
             GameQuestion,
             Player,
             Question,
@@ -37,6 +40,7 @@ import { GetAllMyGamesQuery } from './infrastructure/queries/get-all-my-games.qu
         GetStatisticQuery,
         GetAllMyGamesQuery,
         GetGameQuery,
+        GetTopPlayersQuery,
         CreateAnswerUseCase,
     ],
     exports: [QuizService],

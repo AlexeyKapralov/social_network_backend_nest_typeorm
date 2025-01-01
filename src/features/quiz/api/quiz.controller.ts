@@ -38,6 +38,11 @@ import {
     GetMyAllGamesResultType,
 } from '../infrastructure/queries/get-all-my-games.query';
 import { QueryDtoForGetAllGames } from '../../../common/dto/query-dto';
+import { TopPlayersInputDto } from './dto/input/top-players-input.dto';
+import {
+    GetTopPlayersPayload,
+    GetTopPlayersResultType,
+} from '../infrastructure/queries/get-top-players.query';
 
 const PREFIX_PAIRS = 'pairs';
 const PREFIX_USERS = 'users';
@@ -45,7 +50,7 @@ const PREFIX_USERS = 'users';
 @Controller(`pair-game-quiz`)
 export class QuizController {
     constructor(
-        private quizService: QuizService,
+        private readonly quizService: QuizService,
         private readonly commandBus: CommandBus,
         private readonly queryBus: QueryBus,
     ) {}
@@ -222,5 +227,19 @@ export class QuizController {
         }
 
         return gameInterlayer.data;
+    }
+
+    @Get(`${PREFIX_USERS}/top`)
+    async getTop(@Req() req: any, @Query() params: TopPlayersInputDto) {
+        console.log('params', params);
+
+        const queryPayload = new GetTopPlayersPayload(params);
+
+        const topPlayersInterlayer = await this.queryBus.execute<
+            GetTopPlayersPayload,
+            InterlayerNotice<GetTopPlayersResultType>
+        >(queryPayload);
+
+        return topPlayersInterlayer.data;
     }
 }
