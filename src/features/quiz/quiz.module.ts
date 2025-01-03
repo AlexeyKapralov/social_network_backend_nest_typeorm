@@ -18,6 +18,7 @@ import { GetStatisticQuery } from './infrastructure/queries/get-my-statistic.que
 import { GetAllMyGamesQuery } from './infrastructure/queries/get-all-my-games.query';
 import { GetTopPlayersQuery } from './infrastructure/queries/get-top-players.query';
 import { User } from '../users/domain/user-entity';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
     imports: [
@@ -31,6 +32,7 @@ import { User } from '../users/domain/user-entity';
             Question,
         ]),
         CqrsModule,
+        ScheduleModule.forRoot(),
     ],
     controllers: [QuizController, QuizSuperAdminController],
     providers: [
