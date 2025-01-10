@@ -1,5 +1,6 @@
 import {
     BadGatewayException,
+    BadRequestException,
     Body,
     Controller,
     Delete,
@@ -157,6 +158,27 @@ export class BlogsSaController {
         );
         if (isDeletedInterLayer.hasError()) {
             throw new NotFoundException();
+        }
+    }
+
+    @UseGuards(BasicAuthGuard)
+    @Put(':blogId/bind-with-user/:userId')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async bindBlogWithUser(
+        @Param('blogId', ParseUUIDPipe) blogId: string,
+        @Param('userId', ParseUUIDPipe) userId: string,
+    ) {
+        const bindBlogWithUserInterlayer =
+            await this.blogsService.bindBlogWithUser(blogId, userId);
+        if (bindBlogWithUserInterlayer.hasError()) {
+            throw new BadRequestException(
+                bindBlogWithUserInterlayer.extensions.map((e) => {
+                    return {
+                        message: e.message,
+                        field: e.key,
+                    };
+                }),
+            );
         }
     }
 }

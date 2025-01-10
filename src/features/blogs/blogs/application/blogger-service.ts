@@ -6,29 +6,30 @@ import {
     InterlayerNotice,
     InterlayerStatuses,
 } from '../../../../base/models/interlayer';
-import { blogViewDtoMapper } from '../../../../base/mappers/blog-view-mapper';
 import { BlogPostInputDto } from '../api/dto/input/blog-post-input.dto';
 import { PostsRepository } from '../../posts/infrastructure/posts.repository';
-import { PostsQueryRepository } from '../../posts/infrastructure/posts-query.repository';
 import { PostsViewDto } from '../../posts/api/dto/output/extended-likes-info-view.dto';
 import { LikeStatus } from '../../likes/api/dto/output/likes-view.dto';
-import { UsersQueryRepository } from '../../../users/infrastructure/users-query-repository';
+import { blogViewDtoMapper } from '../../../../base/mappers/blog-view-mapper';
 
 @Injectable()
-export class BlogsService {
+export class BloggerService {
     constructor(
-        private blogsRepository: BlogsRepository,
-        private postsRepository: PostsRepository,
-        private readonly usersQueryRepository: UsersQueryRepository,
+        private readonly blogsRepository: BlogsRepository,
+        private readonly postsRepository: PostsRepository,
     ) {}
 
     async createBlog(
         blogInputDto: BlogInputDto,
+        userId: string,
     ): Promise<InterlayerNotice<BlogViewDto>> {
         const notice = new InterlayerNotice<BlogViewDto>();
-        const blog = await this.blogsRepository.createBlog(blogInputDto);
+        const blog = await this.blogsRepository.createBlog(
+            blogInputDto,
+            userId,
+        );
         if (!blog) {
-            notice.addError('blog is bot created');
+            notice.addError('blog is not created');
             return notice;
         }
         notice.addData(blogViewDtoMapper(blog));
@@ -38,8 +39,29 @@ export class BlogsService {
     async updateBlog(
         blogId: string,
         blogInputDto: BlogInputDto,
+        userId: string,
     ): Promise<InterlayerNotice> {
         const notice = new InterlayerNotice();
+
+        const blog = await this.blogsRepository.findBlogWithUser(blogId);
+
+        if (!blog) {
+            notice.addError(
+                '',
+                'blog is not exist',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        if (blog.user?.id !== userId) {
+            notice.addError(
+                '',
+                'user is not owner for blog',
+                InterlayerStatuses.FORBIDDEN,
+            );
+            return notice;
+        }
 
         const isUpdatedBlog = await this.blogsRepository.updateBlog(
             blogId,
@@ -52,8 +74,31 @@ export class BlogsService {
         return notice;
     }
 
-    async deleteBlog(blogId: string): Promise<InterlayerNotice> {
+    async deleteBlog(
+        blogId: string,
+        userId: string,
+    ): Promise<InterlayerNotice> {
         const notice = new InterlayerNotice();
+
+        const blog = await this.blogsRepository.findBlogWithUser(blogId);
+
+        if (!blog) {
+            notice.addError(
+                '',
+                'blog is not exist',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        if (blog.user.id !== userId) {
+            notice.addError(
+                '',
+                'user is not owner for blog',
+                InterlayerStatuses.FORBIDDEN,
+            );
+            return notice;
+        }
 
         const isDeletedBlog = await this.blogsRepository.deleteBlog(blogId);
         if (!isDeletedBlog) {
@@ -66,12 +111,28 @@ export class BlogsService {
     async createPostForBlog(
         blogId: string,
         blogPostInputDto: BlogPostInputDto,
+        userId: string,
     ): Promise<InterlayerNotice<PostsViewDto | null>> {
         const notice = new InterlayerNotice<PostsViewDto | null>();
 
-        const foundBlog = await this.blogsRepository.findBlog(blogId);
+        const foundBlog = await this.blogsRepository.findBlogWithUser(blogId);
+
         if (!foundBlog) {
-            notice.addError('blog was not found');
+            notice.addError(
+                '',
+                'blog was not found',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        console.log('foundBlog', foundBlog);
+        if (foundBlog.user?.id !== userId) {
+            notice.addError(
+                '',
+                'user is not owner for blog',
+                InterlayerStatuses.FORBIDDEN,
+            );
             return notice;
         }
 
@@ -104,8 +165,40 @@ export class BlogsService {
         blogId: string,
         blogPostInputDto: BlogPostInputDto,
         postId: string,
+        userId: string,
     ): Promise<InterlayerNotice> {
         const notice = new InterlayerNotice();
+
+        const blog = await this.blogsRepository.findBlogWithUser(blogId);
+
+        if (!blog) {
+            notice.addError(
+                '',
+                'blog was not found',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        const post = await this.postsRepository.findPost(postId);
+
+        if (!post) {
+            notice.addError(
+                '',
+                'post was not found',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        if (blog.user.id !== userId) {
+            notice.addError(
+                '',
+                'user is not owner for blog',
+                InterlayerStatuses.FORBIDDEN,
+            );
+            return notice;
+        }
 
         const isPostBelongBlog =
             await this.postsRepository.checkIsPostBelongBlog(blogId, postId);
@@ -123,7 +216,11 @@ export class BlogsService {
             blogPostInputDto,
         );
         if (!isUpdatedPost) {
-            notice.addError('post was not updated');
+            notice.addError(
+                '',
+                'post was not updated',
+                InterlayerStatuses.BAD_REQUEST,
+            );
             return notice;
         }
         return notice;
@@ -132,8 +229,39 @@ export class BlogsService {
     async deletePostForBlog(
         blogId: string,
         postId: string,
+        userId: string,
     ): Promise<InterlayerNotice> {
         const notice = new InterlayerNotice();
+
+        const blog = await this.blogsRepository.findBlogWithUser(blogId);
+
+        if (!blog) {
+            notice.addError(
+                '',
+                'blog was not found',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        if (blog.user.id !== userId) {
+            notice.addError(
+                '',
+                'user is not owner for blog',
+                InterlayerStatuses.FORBIDDEN,
+            );
+            return notice;
+        }
+
+        const post = await this.postsRepository.findPost(postId);
+        if (!post) {
+            notice.addError(
+                '',
+                'post was not found',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
 
         const isPostBelongBlog =
             await this.postsRepository.checkIsPostBelongBlog(blogId, postId);
@@ -151,36 +279,6 @@ export class BlogsService {
             notice.addError('post was not deleted');
             return notice;
         }
-        return notice;
-    }
-
-    async bindBlogWithUser(
-        blogId: string,
-        userId: string,
-    ): Promise<InterlayerNotice> {
-        const notice = new InterlayerNotice();
-        const blog = await this.blogsRepository.findBlogWithUser(blogId);
-        if (!blog) {
-            notice.addError('blog was not found');
-        }
-        if (blog.user?.id) {
-            notice.addError('blog already bind with user');
-        }
-        const user = await this.usersQueryRepository.findUserById(userId);
-        if (!user) {
-            notice.addError('user was not found');
-        }
-        if (notice.hasError()) {
-            return notice;
-        }
-        const result = await this.blogsRepository.bindBlogWithUser(
-            blogId,
-            userId,
-        );
-        if (!result) {
-            notice.addError('blog was not bind with user');
-        }
-
         return notice;
     }
 }

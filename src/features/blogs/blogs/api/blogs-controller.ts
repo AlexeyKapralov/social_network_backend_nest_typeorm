@@ -18,13 +18,13 @@ import {
     GetPostsForBlogPayload,
     GetPostsResultType,
 } from '../../posts/infrastructure/queries/get-posts-for-blog.query';
-import { ValidateJwtGuard } from '../../../auth/auth/guards/validate-jwt-guard';
+import { ValidateOptionalJwtGuard } from '../../../auth/auth/guards/validate-optional-jwt-guard.service';
 
 @Controller('blogs')
 export class BlogsController {
     constructor(
-        private queryBus: QueryBus,
-        private blogQueryRepository: BlogsQueryRepository,
+        private readonly queryBus: QueryBus,
+        private readonly blogQueryRepository: BlogsQueryRepository,
     ) {}
 
     @Get()
@@ -38,7 +38,7 @@ export class BlogsController {
         return getBlogsInterlayer.data;
     }
 
-    @UseGuards(ValidateJwtGuard)
+    @UseGuards(ValidateOptionalJwtGuard)
     @Get(':blogId/posts')
     async getPostsForBlog(
         @Req() req: any,

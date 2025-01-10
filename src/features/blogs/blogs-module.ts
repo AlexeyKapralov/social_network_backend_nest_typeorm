@@ -26,6 +26,9 @@ import { UsersQueryRepository } from '../users/infrastructure/users-query-reposi
 import { GetCommentsForPostQuery } from './comments/infrastructure/queries/get-comments-for-post.query';
 import { LikeService } from './likes/application/like.service';
 import { LikeRepository } from './likes/repository/like.repository';
+import { BloggerController } from './blogs/api/blogger-controller';
+import { BloggerService } from './blogs/application/blogger-service';
+import { GetBlogsForUserQuery } from './blogs/infrastructure/queries/get-blogs-for-user-query';
 
 @Module({
     imports: [
@@ -37,12 +40,14 @@ import { LikeRepository } from './likes/repository/like.repository';
         BlogsController,
         PostsController,
         CommentsController,
+        BloggerController,
     ],
     providers: [
         BlogsService,
         PostsService,
         CommentsService,
         LikeService,
+        BloggerService,
         BlogsRepository,
         PostsRepository,
         CommentsRepository,
@@ -56,6 +61,7 @@ import { LikeRepository } from './likes/repository/like.repository';
         GetOnePostQuery,
         GetOneCommentQuery,
         GetCommentsForPostQuery,
+        GetBlogsForUserQuery,
     ],
     exports: [
         BlogsService,

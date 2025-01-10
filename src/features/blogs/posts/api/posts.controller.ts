@@ -15,7 +15,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { QueryDto } from '../../../../common/dto/query-dto';
-import { ValidateJwtGuard } from '../../../auth/auth/guards/validate-jwt-guard';
+import { ValidateOptionalJwtGuard } from '../../../auth/auth/guards/validate-optional-jwt-guard.service';
 import {
     GetPostsPayload,
     GetPostsResultType,
@@ -44,7 +44,7 @@ export class PostsController {
         @InjectDataSource() private readonly dataSource: DataSource,
     ) {}
 
-    @UseGuards(ValidateJwtGuard)
+    @UseGuards(ValidateOptionalJwtGuard)
     @Get(':postId')
     async findPost(
         @Req() req: any,
@@ -68,7 +68,7 @@ export class PostsController {
         return post;
     }
 
-    @UseGuards(ValidateJwtGuard)
+    @UseGuards(ValidateOptionalJwtGuard)
     @Get()
     async findPosts(@Req() req: any, @Query() query: QueryDto) {
         let userId: string;
@@ -109,7 +109,7 @@ export class PostsController {
         return createCommentInterlayer.data;
     }
 
-    @UseGuards(ValidateJwtGuard)
+    @UseGuards(ValidateOptionalJwtGuard)
     @Get(':postId/comments')
     async getCommentsForPost(
         @Req() req: any,

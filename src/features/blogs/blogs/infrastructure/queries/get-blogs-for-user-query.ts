@@ -6,40 +6,53 @@ import { ILike, Repository } from 'typeorm';
 import { InterlayerNotice } from '../../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../../common/dto/paginator-dto';
 import { QueryDtoWithName } from '../../../../../common/dto/query-dto';
-import { blogWithOwnerViewDtoMapper } from '../../../../../base/mappers/blog-with-blog-owner-view-mapper';
+import { blogViewDtoMapper } from '../../../../../base/mappers/blog-view-mapper';
 
-export class GetBlogsPayload implements IQuery {
-    constructor(public query: QueryDtoWithName) {}
+export class GetBlogsForUserPayload implements IQuery {
+    constructor(
+        public query: QueryDtoWithName,
+        public userId: string,
+    ) {}
 }
 
-@QueryHandler(GetBlogsPayload)
-export class GetBlogsQuery
+@QueryHandler(GetBlogsForUserPayload)
+export class GetBlogsForUserQuery
     implements
         IQueryHandler<
-            GetBlogsPayload,
+            GetBlogsForUserPayload,
             InterlayerNotice<PaginatorDto<BlogViewDto>>
         >
 {
-    constructor(@InjectRepository(Blog) private blogRepo: Repository<Blog>) {}
+    constructor(
+        @InjectRepository(Blog) private readonly blogRepo: Repository<Blog>,
+    ) {}
 
     async execute(
-        queryPayload: GetBlogsPayload,
+        queryPayload: GetBlogsForUserPayload,
     ): Promise<InterlayerNotice<PaginatorDto<BlogViewDto>>> {
         const notice = new InterlayerNotice<PaginatorDto<BlogViewDto>>();
 
-        queryPayload.query.searchNameTerm === null
-            ? (queryPayload.query.searchNameTerm = '%%')
-            : (queryPayload.query.searchNameTerm = `%${queryPayload.query.searchNameTerm}%`);
+        if (queryPayload.query.searchNameTerm === null) {
+            queryPayload.query.searchNameTerm = '%%';
+        } else {
+            queryPayload.query.searchNameTerm = `%${queryPayload.query.searchNameTerm}%`;
+        }
 
         let countBlogs = await this.blogRepo.count({
             where: {
                 name: ILike(queryPayload.query.searchNameTerm),
+                user: {
+                    id: queryPayload.userId,
+                },
             },
         });
 
         const blogs = await this.blogRepo.find({
             where: {
                 name: ILike(queryPayload.query.searchNameTerm),
+                user: {
+                    id: queryPayload.userId,
+                },
             },
             relations: {
                 user: true,
@@ -60,7 +73,7 @@ export class GetBlogsQuery
             page: queryPayload.query.pageNumber,
             pageSize: queryPayload.query.pageSize,
             totalCount: countBlogs,
-            items: blogs.map((c) => blogWithOwnerViewDtoMapper(c)),
+            items: blogs.map((c) => blogViewDtoMapper(c)),
         };
 
         notice.addData(blogsPaginator);

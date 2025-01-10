@@ -3,25 +3,30 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Blog } from '../domain/blog-entity';
 import { Repository } from 'typeorm';
 import { BlogInputDto } from '../api/dto/input/blog-input-dto';
-import { IsString, Length, Matches } from 'class-validator';
-import { BlogPostInputDto } from '../api/dto/input/blog-post-input.dto';
-import { PostsViewDto } from '../../posts/api/dto/output/extended-likes-info-view.dto';
 import { PostsRepository } from '../../posts/infrastructure/posts.repository';
-import { Post } from '../../posts/domain/posts.entity';
 
 @Injectable()
 export class BlogsRepository {
-    constructor(
-        @InjectRepository(Blog) private blogRepo: Repository<Blog>,
-        private postsRepository: PostsRepository,
-    ) {}
+    constructor(@InjectRepository(Blog) private blogRepo: Repository<Blog>) {}
 
     async findBlog(blogId: string): Promise<Blog | null> {
         return await this.blogRepo.findOne({ where: { id: blogId } });
     }
 
-    async createBlog(blogInputDto: BlogInputDto): Promise<Blog> {
-        return await Blog.createBlog(blogInputDto);
+    async findBlogWithUser(blogId: string): Promise<Blog | null> {
+        return await this.blogRepo.findOne({
+            where: { id: blogId },
+            relations: { user: true },
+        });
+    }
+
+    async createBlog(
+        blogInputDto: BlogInputDto,
+        userId: string = null,
+    ): Promise<Blog> {
+        return userId
+            ? await Blog.createBlogWithUser(blogInputDto, userId)
+            : await Blog.createBlog(blogInputDto);
     }
 
     async updateBlog(
@@ -54,5 +59,24 @@ export class BlogsRepository {
         }
         await blog.softRemove();
         return true;
+    }
+
+    async bindBlogWithUser(blogId: string, userId: string): Promise<boolean> {
+        try {
+            await this.blogRepo.update(
+                {
+                    id: blogId,
+                },
+                {
+                    user: {
+                        id: userId,
+                    },
+                },
+            );
+            return true;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
     }
 }

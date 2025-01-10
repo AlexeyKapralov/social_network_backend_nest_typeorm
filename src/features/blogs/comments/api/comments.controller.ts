@@ -20,13 +20,13 @@ import { CommentsService } from '../application/comments.service';
 import { CommentInputDto } from './dto/input/comment-input.dto';
 import { InterlayerStatuses } from '../../../../base/models/interlayer';
 import { LikeInputDto } from '../../likes/api/dto/input/like-input.dto';
-import { ValidateJwtGuard } from '../../../auth/auth/guards/validate-jwt-guard';
+import { ValidateOptionalJwtGuard } from '../../../auth/auth/guards/validate-optional-jwt-guard.service';
 
 @Controller('comments')
 export class CommentsController {
     constructor(private commentsService: CommentsService) {}
 
-    @UseGuards(ValidateJwtGuard)
+    @UseGuards(ValidateOptionalJwtGuard)
     @Get(':commentId')
     async getOneComment(
         @Req() req: any,

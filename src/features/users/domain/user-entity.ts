@@ -2,12 +2,12 @@ import {
     Column,
     Entity,
     JoinColumn,
-    ManyToOne,
     OneToMany,
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Player } from '../../quiz/domain/player.entity';
+import { Blog } from '../../blogs/blogs/domain/blog-entity';
 
 @Entity()
 export class User {
@@ -50,4 +50,8 @@ export class User {
     @OneToMany(() => Player, (player) => player.user)
     @JoinColumn({ name: 'playerId' })
     players: Player[];
+
+    @OneToMany(() => Blog, (blog) => blog.user)
+    @JoinColumn({ name: 'blogId' })
+    blogs: Blog[];
 }

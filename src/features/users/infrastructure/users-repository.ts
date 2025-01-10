@@ -9,7 +9,7 @@ import { CryptoService } from '../../../base/services/crypto-service';
 @Injectable()
 export class UsersRepository {
     constructor(
-        @InjectDataSource() private dataSource: DataSource,
+        @InjectDataSource() private readonly dataSource: DataSource,
         private readonly cryptoService: CryptoService,
     ) {}
 

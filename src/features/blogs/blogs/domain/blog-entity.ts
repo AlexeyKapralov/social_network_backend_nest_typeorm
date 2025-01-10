@@ -3,9 +3,12 @@ import {
     Column,
     DeleteDateColumn,
     Entity,
+    JoinColumn,
+    ManyToOne,
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import { BlogInputDto } from '../api/dto/input/blog-input-dto';
+import { User } from '../../../users/domain/user-entity';
 
 @Entity()
 export class Blog extends BaseEntity {
@@ -14,6 +17,9 @@ export class Blog extends BaseEntity {
 
     @Column({ collation: 'C' })
     name: string;
+
+    @Column({ nullable: true })
+    ownerId: string;
 
     @Column({ collation: 'C' })
     description: string;
@@ -30,6 +36,10 @@ export class Blog extends BaseEntity {
     @DeleteDateColumn({ nullable: true })
     deletedDate: Date;
 
+    @ManyToOne(() => User)
+    @JoinColumn({ name: 'ownerId' })
+    user: User;
+
     static async createBlog(blogInputDto: BlogInputDto): Promise<Blog> {
         const blog = new Blog();
         blog.name = blogInputDto.name;
@@ -37,6 +47,23 @@ export class Blog extends BaseEntity {
         blog.websiteUrl = blogInputDto.websiteUrl;
         blog.createdAt = new Date();
         blog.isMembership = false;
+
+        await blog.save();
+
+        return blog;
+    }
+
+    static async createBlogWithUser(
+        blogInputDto: BlogInputDto,
+        userId: string,
+    ): Promise<Blog> {
+        const blog = new Blog();
+        blog.name = blogInputDto.name;
+        blog.description = blogInputDto.description;
+        blog.websiteUrl = blogInputDto.websiteUrl;
+        blog.createdAt = new Date();
+        blog.isMembership = false;
+        blog.ownerId = userId;
 
         await blog.save();
 
