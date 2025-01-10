@@ -66,12 +66,12 @@ import { Question } from './features/quiz/domain/question.entity';
 
                 return {
                     type: 'postgres',
-                    host: 'localhost', //'127.0.0.1',
+                    host: databaseSettings.POSTGRES_HOST, //'127.0.0.1',
                     username: databaseSettings.POSTGRES_USER,
                     password: dbPassword,
                     database: database,
                     port: 5432,
-                    // ssl: true,
+                    ssl: true,
                     // url: process.env.POSTGRESQL_CONNECTION_URI,
                     entities: entitiesArray,
                     autoLoadEntities: isTesting, //false в продакшене и для raw_sql только

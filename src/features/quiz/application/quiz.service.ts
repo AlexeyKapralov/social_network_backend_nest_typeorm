@@ -8,17 +8,17 @@ import { GamePairViewDto } from '../api/dto/output/game-pair-view.dto';
 import { Game } from '../domain/game.entity';
 import { GamePlayerProgressViewDto } from '../api/dto/output/game-player-progress-view.dto';
 import { QuestionViewDto } from '../api/dto/output/question-view.dto';
-import { Player } from '../domain/player.entity';
 import { QuestionInputDto } from '../api/dto/input/question-input.dto';
 import { questionViewMapper } from '../../../base/mappers/question-view-mapper';
 import { PublishInputDto } from '../api/dto/input/publish-input.dto';
 import { UsersRepository } from '../../users/infrastructure/users-repository';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class QuizService {
     constructor(
-        private quizRepository: QuizRepository,
-        private usersRepository: UsersRepository,
+        private readonly quizRepository: QuizRepository,
+        private readonly usersRepository: UsersRepository,
     ) {}
 
     //переписать в useCase или Command Handler
@@ -84,27 +84,14 @@ export class QuizService {
             return notice;
         }
 
-        let questions = [];
-        if (game.gameQuestions.length > 0) {
-            game.gameQuestions.map((gq) => {
-                let gameQuestion = {
-                    id: gq.id,
-                    body: gq.question.body,
-                };
-                questions.push(gameQuestion);
-            });
-        } else {
-            questions = null;
-        }
+        let questions = this.setGameQuestions(game);
 
-        let player1: Player;
-        let player2: Player;
-        if (game.player_1_id) {
-            player1 = await this.quizRepository.getPlayerById(game.player_1_id);
-        }
-        if (game.player_2_id) {
-            player2 = await this.quizRepository.getPlayerById(game.player_2_id);
-        }
+        let player1 = await this.quizRepository.getPlayerById(
+            game?.player_1_id,
+        );
+        let player2 = await this.quizRepository.getPlayerById(
+            game?.player_2_id,
+        );
 
         const mappedGame: GamePairViewDto = {
             id: game.id,
@@ -138,6 +125,22 @@ export class QuizService {
         };
         notice.addData(mappedGame);
         return notice;
+    }
+
+    private setGameQuestions(game: Game): any[] {
+        let questions = [];
+        if (game.gameQuestions.length > 0) {
+            game.gameQuestions.forEach((gq) => {
+                let gameQuestion = {
+                    id: gq.id,
+                    body: gq.question.body,
+                };
+                questions.push(gameQuestion);
+            });
+        } else {
+            questions = null;
+        }
+        return questions;
     }
 
     async createQuestion(
@@ -287,7 +290,8 @@ export class QuizService {
         const notice = new InterlayerNotice<Game>();
 
         // проверить участвует ли юзер в игре
-        const game = await this.quizRepository.getActiveGameOfUser(userId);
+        const game =
+            await this.quizRepository.getActiveOrPendingGameOfUser(userId);
         if (!game) {
             notice.addError(
                 `user don't participate in active game`,
@@ -299,5 +303,14 @@ export class QuizService {
 
         notice.addData(game);
         return notice;
+    }
+
+    @Cron('*/10 * * * * *')
+    async setFinishedGamesWithNoAnswerOfSecondPlayer(
+        userId: string,
+    ): Promise<void> {
+        console.log('Called every 10 seconds');
+
+        await this.quizRepository.setFinishedGamesWithNoAnswerOfSecondPlayer();
     }
 }

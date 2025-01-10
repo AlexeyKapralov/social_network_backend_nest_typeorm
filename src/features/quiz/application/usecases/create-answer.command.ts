@@ -6,12 +6,9 @@ import {
 import { AnswerInputDto } from '../../api/dto/input/answer-input.dto';
 import { QuizRepository } from '../../infrastructure/quiz.repository';
 import { AnswerViewDto } from '../../api/dto/output/answer-view.dto';
-import { answerViewDtoMapper } from '../../../../base/mappers/answer-view-mapper';
-import { AnswerStatusesEnum } from '../../../../common/enum/answer-statuses.enum';
 import { Answer } from '../../domain/answer.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Game } from '../../domain/game.entity';
 import { GameQuestion } from '../../domain/game-question.entity';
 
 export class CreateAnswerCommand {
@@ -28,7 +25,8 @@ export class CreateAnswerUseCase
 {
     constructor(
         private readonly quizRepository: QuizRepository,
-        @InjectRepository(Answer) private answerRepo: Repository<Answer>,
+        @InjectRepository(Answer)
+        private readonly answerRepo: Repository<Answer>,
     ) {}
 
     async execute(
@@ -165,9 +163,8 @@ export class CreateAnswerUseCase
             if (isCurrentUserFasterThanAnotherPlayer) {
                 if (currentPlayerCountCorrectAnswers > 0)
                     await this.quizRepository.addScore(player.id);
-            } else {
-                if (anotherPlayerCountCorrectAnswers > 0)
-                    await this.quizRepository.addScore(anotherPlayerId);
+            } else if (anotherPlayerCountCorrectAnswers > 0) {
+                await this.quizRepository.addScore(anotherPlayerId);
             }
         }
 

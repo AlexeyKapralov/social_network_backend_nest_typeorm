@@ -12,4 +12,6 @@ export class DatabaseSettings {
     POSTGRES_USER = this.environmentVariable.POSTGRES_USER;
     @IsString()
     POSTGRES_PASSWORD = this.environmentVariable.POSTGRES_PASSWORD;
+    @IsString()
+    POSTGRES_HOST = this.environmentVariable.POSTGRES_HOST;
 }
