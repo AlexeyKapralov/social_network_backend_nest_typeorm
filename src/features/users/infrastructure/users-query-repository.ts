@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, MoreThan } from 'typeorm';
 import { User } from '../domain/user-entity';
-import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
+import { BanStatus, QueryDtoWithBan } from '../../../common/dto/query-dto';
 import { UserViewDto } from '../api/dto/output/user-view-dto';
 import { toUserViewDtoMapper } from '../../../base/mappers/user-view-mapper';
 
@@ -41,6 +41,7 @@ export class UsersQueryRepository {
             where: {
                 id: userId,
                 isDeleted: false,
+                isBanned: false,
             },
         });
         return user ? toUserViewDtoMapper(user) : null;
@@ -58,7 +59,7 @@ export class UsersQueryRepository {
         });
     }
 
-    async findUsers(query: QueryDtoWithEmailLogin): Promise<User[]> {
+    async findUsers(query: QueryDtoWithBan): Promise<UserViewDto[]> {
         const userRepository = this.dataSource.getRepository(User);
 
         let emailTerm =
@@ -74,7 +75,8 @@ export class UsersQueryRepository {
             emailTerm = '%%';
             loginTerm = '%%';
         }
-        return await userRepository
+
+        const dbQuery = userRepository
             .createQueryBuilder('u')
             .where(
                 'u.isDeleted = :isDeleted and u.isConfirmed = :isConfirmed',
@@ -92,11 +94,24 @@ export class UsersQueryRepository {
             )
             .orderBy(`"${query.sortBy}"`, query.sortDirection)
             .take(query.pageSize)
-            .skip((query.pageNumber - 1) * query.pageSize)
-            .getMany();
+            .skip((query.pageNumber - 1) * query.pageSize);
+
+        if (query.banStatus !== BanStatus.all) {
+            dbQuery.andWhere('u.isBanned = :isBanned', {
+                isBanned: query.banStatus === BanStatus.banned,
+            });
+        }
+        const users = await dbQuery.getMany();
+        return users.map((i) => {
+            return toUserViewDtoMapper(i);
+        });
     }
 
-    async getCountUsers(emailTerm: string, loginTerm: string): Promise<number> {
+    async getCountUsers(
+        emailTerm: string,
+        loginTerm: string,
+        banStatus: BanStatus,
+    ): Promise<number> {
         const userRepository = this.dataSource.getRepository(User);
 
         emailTerm = emailTerm === null ? '' : `%${emailTerm.toLowerCase()}%`;
@@ -107,7 +122,7 @@ export class UsersQueryRepository {
             loginTerm = '%%';
         }
 
-        return userRepository
+        const dbQuery = userRepository
             .createQueryBuilder('u')
             .where(
                 'u.isDeleted = :isDeleted and u.isConfirmed = :isConfirmed',
@@ -122,7 +137,14 @@ export class UsersQueryRepository {
                     emailTerm,
                     loginTerm,
                 },
-            )
-            .getCount();
+            );
+
+        if (banStatus !== BanStatus.all) {
+            dbQuery.andWhere('u.isBanned = :isBanned', {
+                isBanned: banStatus === BanStatus.banned,
+            });
+        }
+
+        return dbQuery.getCount();
     }
 }

@@ -822,6 +822,8 @@ export class QuizRepository {
                 e,
             );
             await queryRunner.rollbackTransaction();
+        } finally {
+            await queryRunner.release();
         }
     }
 }

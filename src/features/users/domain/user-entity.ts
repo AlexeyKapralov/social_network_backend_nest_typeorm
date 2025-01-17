@@ -49,6 +49,9 @@ export class User {
     @Column({ default: null })
     banReason: string;
 
+    @Column({ default: null })
+    banDate: Date;
+
     @Column()
     @Exclude()
     confirmationCodeExpireDate: Date;

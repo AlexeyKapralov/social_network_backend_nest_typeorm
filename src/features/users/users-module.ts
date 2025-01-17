@@ -8,9 +8,10 @@ import { UsersQueryRepository } from './infrastructure/users-query-repository';
 import { CryptoService } from '../../base/services/crypto-service';
 import { DeviceService } from '../auth/devices/application/device-service';
 import { DeviceRepository } from '../auth/devices/infrastructure/device-repository';
+import BlogsModule from '../blogs/blogs-module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([User])],
+    imports: [TypeOrmModule.forFeature([User]), BlogsModule],
     controllers: [UsersSaController],
     providers: [
         UsersService,

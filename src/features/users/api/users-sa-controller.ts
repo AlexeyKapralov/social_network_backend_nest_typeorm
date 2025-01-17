@@ -10,6 +10,7 @@ import {
     Param,
     ParseUUIDPipe,
     Post,
+    Put,
     Query,
     UseGuards,
 } from '@nestjs/common';
@@ -17,7 +18,7 @@ import { UsersService } from '../application/users-service';
 import { UserInputDto } from './dto/input/user-input-dto';
 import { AuthGuard } from '@nestjs/passport';
 import { BasicAuthGuard } from '../../auth/auth/guards/basic-auth-guard';
-import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
+import { QueryDtoWithBan } from '../../../common/dto/query-dto';
 import { BanUserInputDto } from './dto/input/ban-user-input-dto';
 
 @Controller('sa/users')
@@ -47,9 +48,8 @@ export class UsersSaController {
     }
 
     @UseGuards(BasicAuthGuard)
-    // @UseInterceptors(ClassSerializerInterceptor)//можно использовать для отдельного контроллера, а также это можно для всего приложения в main.ts
     @Get()
-    async findUsers(@Query() queryUsers: QueryDtoWithEmailLogin) {
+    async findUsers(@Query() queryUsers: QueryDtoWithBan) {
         const interLayerFindUsers =
             await this.userService.findUsers(queryUsers);
 
@@ -70,7 +70,7 @@ export class UsersSaController {
 
     @UseGuards(BasicAuthGuard)
     @HttpCode(HttpStatus.NO_CONTENT)
-    @Post(':userId/ban')
+    @Put(':userId/ban')
     async banUser(
         @Param('userId', ParseUUIDPipe) userId: string,
         @Body() banUserInputDto: BanUserInputDto,

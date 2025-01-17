@@ -7,7 +7,6 @@ import { Post } from '../../domain/posts.entity';
 import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
 import { PostsViewDto } from '../../api/dto/output/extended-likes-info-view.dto';
-import { BlogsQueryRepository } from '../../../blogs/infrastructure/blogs-query-repository';
 
 export class GetPostsPayload implements IQuery {
     constructor(
@@ -21,8 +20,8 @@ export class GetPostsQuery
     implements IQueryHandler<GetPostsPayload, GetPostsResultType>
 {
     constructor(
-        @InjectRepository(Post) private postRepo: Repository<Post>,
-        @InjectDataSource() private dataSource: DataSource,
+        @InjectRepository(Post) private readonly postRepo: Repository<Post>,
+        @InjectDataSource() private readonly dataSource: DataSource,
     ) {}
 
     async execute(queryPayload: GetPostsPayload): Promise<GetPostsResultType> {
@@ -34,12 +33,18 @@ export class GetPostsQuery
         countPosts = await this.postRepo
             .createQueryBuilder('p')
             .leftJoinAndSelect('p.blog', 'blog')
+            .innerJoin('blog.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .getCount();
 
         const likes = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('like')
             .leftJoinAndSelect('like.user', 'u')
+            .innerJoin('like.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('"like"."likeStatus" = :likeStatus', {
                 likeStatus: LikeStatus.Like,
             })
@@ -55,7 +60,7 @@ export class GetPostsQuery
 
         const likesTop3 = this.dataSource
             .createQueryBuilder()
-            .from('(' + likes.getQuery() + ')', 'l')
+            .from(`(${likes.getQuery()})`, 'l')
             .select([
                 '"l"."likesParentId" AS "likesParentId"',
                 `
@@ -73,6 +78,9 @@ export class GetPostsQuery
         const userLike = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('userlike')
+            .innerJoin('userlike.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('"userlike"."userId" = :userId', {
                 userId: queryPayload.userId,
             })
@@ -85,6 +93,9 @@ export class GetPostsQuery
             .createQueryBuilder('p')
             .limit(limit)
             .leftJoinAndSelect('p.blog', 'blog')
+            .innerJoin('blog.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .select([
                 'p.id AS id',
                 'p.title AS title',
@@ -104,14 +115,14 @@ export class GetPostsQuery
 
         const postsSourceWithNewestLikes = await this.dataSource
             .createQueryBuilder()
-            .from('(' + postsUnique.getQuery() + ')', 'p')
+            .from(`(${postsUnique.getQuery()})`, 'p')
             .leftJoinAndSelect(
-                '(' + userLike.getQuery() + ')',
+                `(${userLike.getQuery()})`,
                 'ul',
                 '"ul"."parentId" = "p"."id"',
             )
             .leftJoinAndSelect(
-                '(' + likesTop3.getQuery() + ')',
+                `(${likesTop3.getQuery()})`,
                 'l',
                 '"l"."likesParentId" = "p"."id"',
             )
@@ -175,15 +186,13 @@ export class GetPostsQuery
             posts.push(fullPost);
         });
 
-        const postsWithPaginate: PaginatorDto<PostsViewDto> = {
+        return {
             pagesCount: Math.ceil(countPosts / queryPayload.query.pageSize),
             page: queryPayload.query.pageNumber,
             pageSize: queryPayload.query.pageSize,
             totalCount: countPosts,
             items: posts,
         };
-
-        return postsWithPaginate;
     }
 }
 

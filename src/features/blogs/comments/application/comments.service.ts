@@ -30,12 +30,12 @@ import { LikeService } from '../../likes/application/like.service';
 @Injectable()
 export class CommentsService {
     constructor(
-        @InjectDataSource() private dataSource: DataSource,
-        private usersQueryRepository: UsersQueryRepository,
-        private postsService: PostsService,
-        private commentsRepository: CommentsRepository,
-        private likesService: LikeService,
-        private queryBus: QueryBus,
+        @InjectDataSource() private readonly dataSource: DataSource,
+        private readonly usersQueryRepository: UsersQueryRepository,
+        private readonly postsService: PostsService,
+        private readonly commentsRepository: CommentsRepository,
+        private readonly likesService: LikeService,
+        private readonly queryBus: QueryBus,
     ) {}
     async createComment(
         commentInputDto: CommentInputDto,
@@ -238,6 +238,7 @@ export class CommentsService {
             notice.addError('comment was not found');
             return notice;
         }
+
         const user = await this.usersQueryRepository.findUserById(userId);
         if (!user) {
             notice.addError('user was not found');
@@ -253,11 +254,14 @@ export class CommentsService {
             notice.addError('like was not found');
             return notice;
         }
+
         const isLikeStatusUpdate = await this.likesService.changeLikeStatus(
             userId,
             commentId,
             likeInputDto.likeStatus,
+            'comment',
         );
+
         if (isLikeStatusUpdate.hasError()) {
             notice.addError('like status was not updated');
             return notice;

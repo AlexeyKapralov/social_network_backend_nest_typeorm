@@ -132,6 +132,7 @@ export class UsersRepository {
                 {
                     isBanned: true,
                     banReason: banReason,
+                    banDate: new Date(),
                 },
             );
             return true;
@@ -151,6 +152,7 @@ export class UsersRepository {
                 {
                     isBanned: false,
                     banReason: null,
+                    banDate: null,
                 },
             );
             return true;

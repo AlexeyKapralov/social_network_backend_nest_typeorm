@@ -14,6 +14,12 @@ export enum SortField {
     finishGameDate = 'finishGameDate',
 }
 
+export enum BanStatus {
+    all = 'all',
+    banned = 'banned',
+    notBanned = 'notBanned',
+}
+
 export class QueryDtoBase {
     @Transform(({ value }: TransformFnParams) => {
         switch (value.toUpperCase()) {
@@ -58,9 +64,18 @@ export class QueryDtoWithEmailLogin extends QueryDto {
     searchLoginTerm: string = null;
 }
 
+export class QueryDtoWithLogin extends QueryDto {
+    searchLoginTerm: string = null;
+}
+
 export class QueryDtoWithName extends QueryDto {
     // @Transform(({ value }: TransformFnParams) => {
     //     value.toUpperCase();
     // })
     searchNameTerm: string = null;
+}
+
+export class QueryDtoWithBan extends QueryDtoWithEmailLogin {
+    @IsEnum(BanStatus)
+    banStatus: BanStatus = BanStatus.all;
 }

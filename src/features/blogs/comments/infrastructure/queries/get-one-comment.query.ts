@@ -18,8 +18,9 @@ export class GetOneCommentQuery
     implements IQueryHandler<GetOneCommentPayload, GetOneCommentResultType>
 {
     constructor(
-        @InjectRepository(Comment) private commentRepo: Repository<Comment>,
-        @InjectDataSource() private dataSource: DataSource,
+        @InjectRepository(Comment)
+        private readonly commentRepo: Repository<Comment>,
+        @InjectDataSource() private readonly dataSource: DataSource,
     ) {}
 
     async execute(
@@ -28,6 +29,9 @@ export class GetOneCommentQuery
         const userLike = await this.dataSource
             .getRepository(Like)
             .createQueryBuilder('userlike')
+            .innerJoin('userlike.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('"userlike"."commentId" = :commentId', {
                 commentId: queryPayload.commentId,
             })
@@ -61,6 +65,9 @@ export class GetOneCommentQuery
                     )
                 )::json->0 AS "likesInfo"`,
             ])
+            .where('u.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .groupBy('c.id')
             .addGroupBy('c.content')
             .addGroupBy('c."createdAt"')

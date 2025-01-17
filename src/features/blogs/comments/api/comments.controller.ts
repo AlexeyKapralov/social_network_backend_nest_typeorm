@@ -24,7 +24,7 @@ import { ValidateOptionalJwtGuard } from '../../../auth/auth/guards/validate-opt
 
 @Controller('comments')
 export class CommentsController {
-    constructor(private commentsService: CommentsService) {}
+    constructor(private readonly commentsService: CommentsService) {}
 
     @UseGuards(ValidateOptionalJwtGuard)
     @Get(':commentId')

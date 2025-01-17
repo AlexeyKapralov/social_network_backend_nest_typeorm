@@ -7,8 +7,8 @@ import { Like } from '../domain/likes.entity';
 @Injectable()
 export class LikeRepository {
     constructor(
-        @InjectDataSource() private dataSource: DataSource,
-        @InjectRepository(Like) private likeRepo: Repository<Like>,
+        @InjectDataSource() private readonly dataSource: DataSource,
+        @InjectRepository(Like) private readonly likeRepo: Repository<Like>,
     ) {}
     async createLikeForPost(
         userId: string,
@@ -76,22 +76,17 @@ export class LikeRepository {
         userId: string,
         parentId: string,
         likeStatus: LikeStatus,
+        parentType: 'comment' | 'post',
     ): Promise<boolean> {
-        let likeComment = await this.findLikeByUserAndParent(
+        let like = await this.findLikeByUserAndParent(
             userId,
             parentId,
-            'comment',
-        );
-        let likePost = await this.findLikeByUserAndParent(
-            userId,
-            parentId,
-            'post',
+            parentType,
         );
 
-        if (!likeComment && !likePost) {
+        if (!like) {
             return false;
         }
-        const like = likeComment || likePost;
         like.likeStatus = likeStatus;
 
         try {
@@ -111,36 +106,36 @@ export class LikeRepository {
         parentId: string,
         type: 'post' | 'comment',
     ): Promise<Like> {
-        let likeComment;
-        likeComment = await this.dataSource
-            .getRepository(Like)
-            .createQueryBuilder('l')
-            .leftJoin('l.user', 'u', 'u.isBanned = :isBanned', {
-                isBanned: false,
-            })
-            .where('l."commentId" = :commentId', { commentId: parentId })
-            .andWhere('l."userId" = :userId', { userId: userId })
-            .getOne();
-
-        let likePost;
-        likePost = await this.dataSource
-            .getRepository(Like)
-            .createQueryBuilder('l')
-            .leftJoin('l.user', 'u', 'u.isBanned = :isBanned', {
-                isBanned: false,
-            })
-            .where('l."parentId" = :parentId', { parentId: parentId })
-            .andWhere('l."userId" = :userId', { userId: userId })
-            .getOne();
-
-        if (!likePost && !likeComment) {
-            type === 'post'
-                ? (likePost = await this.createLikeForPost(userId, parentId))
-                : (likeComment = await this.createLikeForComment(
-                      userId,
-                      parentId,
-                  ));
+        let like;
+        if (type === 'post') {
+            like = await this.dataSource
+                .getRepository(Like)
+                .createQueryBuilder('l')
+                .innerJoin('l.user', 'u2', 'u2.isBanned = :isBanned', {
+                    isBanned: false,
+                })
+                .where('l."parentId" = :parentId', { parentId: parentId })
+                .andWhere('l."userId" = :userId', { userId: userId })
+                .getOne();
+        } else {
+            like = await this.dataSource
+                .getRepository(Like)
+                .createQueryBuilder('l')
+                .innerJoin('l.user', 'u2', 'u2.isBanned = :isBanned', {
+                    isBanned: false,
+                })
+                .where('l."commentId" = :commentId', { commentId: parentId })
+                .andWhere('l."userId" = :userId', { userId: userId })
+                .getOne();
         }
-        return likePost || likeComment;
+
+        if (!like) {
+            if (type === 'post') {
+                like = await this.createLikeForPost(userId, parentId);
+            } else {
+                like = await this.createLikeForComment(userId, parentId);
+            }
+        }
+        return like;
     }
 }

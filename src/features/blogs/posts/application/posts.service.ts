@@ -101,6 +101,7 @@ export class PostsService {
             userId,
             postId,
             likeInputDto.likeStatus,
+            'post',
         );
         if (isLikeStatusUpdate.hasError()) {
             notice.addError('like status was not updated');

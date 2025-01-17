@@ -18,8 +18,8 @@ export class GetOnePostQuery
     implements IQueryHandler<GetOnePostPayload, GetOnePostResultType>
 {
     constructor(
-        @InjectRepository(Post) private postRepo: Repository<Post>,
-        @InjectDataSource() private dataSource: DataSource,
+        @InjectRepository(Post) private readonly postRepo: Repository<Post>,
+        @InjectDataSource() private readonly dataSource: DataSource,
     ) {}
 
     async execute(
@@ -29,9 +29,13 @@ export class GetOnePostQuery
             .getRepository(Like)
             .createQueryBuilder('like')
             .leftJoinAndSelect('like.user', 'u')
+            .innerJoin('like.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('"like"."likeStatus" = :likeStatus', {
                 likeStatus: LikeStatus.Like,
             })
+
             .select([
                 'like.createdAt AS "addedAt"',
                 'like.parentId AS "likesParentId"',
@@ -44,7 +48,7 @@ export class GetOnePostQuery
 
         const likesTop3 = this.dataSource
             .createQueryBuilder()
-            .from('(' + likes.getQuery() + ')', 'l')
+            .from(`(${likes.getQuery()})`, 'l')
             .select([
                 '"l"."likesParentId" AS "likesParentId"',
                 `
@@ -62,6 +66,9 @@ export class GetOnePostQuery
         const userLike = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('userlike')
+            .innerJoin('userlike.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('"userlike"."userId" = :userId', {
                 userId: queryPayload.userId,
             })
@@ -75,12 +82,12 @@ export class GetOnePostQuery
             .where('p.id = :postId', { postId: queryPayload.postId })
             .leftJoinAndSelect('p.blog', 'blog')
             .leftJoinAndSelect(
-                '(' + userLike.getQuery() + ')',
+                `(${userLike.getQuery()})`,
                 'ul',
                 '"ul"."parentId" = p.id',
             )
             .leftJoinAndSelect(
-                '(' + likesTop3.getQuery() + ')',
+                `(${likesTop3.getQuery()})`,
                 'l',
                 '"l"."likesParentId" = p.id',
             )

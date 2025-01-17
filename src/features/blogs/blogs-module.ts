@@ -66,6 +66,7 @@ import { GetBlogsForUserQuery } from './blogs/infrastructure/queries/get-blogs-f
     exports: [
         BlogsService,
         PostsService,
+        LikeService,
         BlogsQueryRepository,
         PostsQueryRepository,
     ],

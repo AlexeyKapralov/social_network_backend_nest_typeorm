@@ -20,9 +20,9 @@ export class GetOnePostForBlogQuery
     implements IQueryHandler<GetOnePostForBlogPayload, GetOnePostResultType>
 {
     constructor(
-        @InjectRepository(Post) private postRepo: Repository<Post>,
-        @InjectDataSource() private dataSource: DataSource,
-        private blogQueryRepository: BlogsQueryRepository,
+        @InjectRepository(Post) private readonly postRepo: Repository<Post>,
+        @InjectDataSource() private readonly dataSource: DataSource,
+        private readonly blogQueryRepository: BlogsQueryRepository,
     ) {}
 
     async execute(
@@ -42,6 +42,9 @@ export class GetOnePostForBlogQuery
             .getRepository(Like)
             .createQueryBuilder('like')
             .leftJoinAndSelect('like.user', 'u')
+            .innerJoin('like.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('"like"."likeStatus" = :likeStatus', {
                 likeStatus: LikeStatus.Like,
             })
@@ -57,7 +60,7 @@ export class GetOnePostForBlogQuery
 
         const likesTop3 = this.dataSource
             .createQueryBuilder()
-            .from('(' + likesSource.getQuery() + ')', 'l')
+            .from(`(${likesSource.getQuery()})`, 'l')
             .select([
                 '"l"."likesParentId" AS "likesParentId"',
                 `
@@ -75,6 +78,9 @@ export class GetOnePostForBlogQuery
         const userLike = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('userlike')
+            .innerJoin('userlike.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('"userlike"."userId" = :userId', {
                 userId: queryPayload.userId,
             })
@@ -87,13 +93,16 @@ export class GetOnePostForBlogQuery
             .createQueryBuilder('p')
             .where('p.id = :postId', { postId: queryPayload.postId })
             .leftJoinAndSelect('p.blog', 'blog')
+            .innerJoin('blog.user', 'u2', 'u2.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .leftJoinAndSelect(
-                '(' + userLike.getQuery() + ')',
+                `(${userLike.getQuery()})`,
                 'ul',
                 '"ul"."parentId" = p.id',
             )
             .leftJoinAndSelect(
-                '(' + likesTop3.getQuery() + ')',
+                `(${likesTop3.getQuery()})`,
                 'l',
                 '"l"."likesParentId" = p.id',
             )
