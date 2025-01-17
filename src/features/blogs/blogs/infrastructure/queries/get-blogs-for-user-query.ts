@@ -43,6 +43,7 @@ export class GetBlogsForUserQuery
                 name: ILike(queryPayload.query.searchNameTerm),
                 user: {
                     id: queryPayload.userId,
+                    isBanned: false,
                 },
             },
         });
@@ -52,6 +53,7 @@ export class GetBlogsForUserQuery
                 name: ILike(queryPayload.query.searchNameTerm),
                 user: {
                     id: queryPayload.userId,
+                    isBanned: false,
                 },
             },
             relations: {

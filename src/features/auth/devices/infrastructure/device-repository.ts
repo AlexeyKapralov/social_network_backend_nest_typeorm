@@ -5,7 +5,7 @@ import { Device } from '../domain/device-entity';
 
 @Injectable()
 export class DeviceRepository {
-    constructor(@InjectDataSource() private dataSource: DataSource) {}
+    constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
     async createDevice(
         userId: string,
@@ -99,5 +99,25 @@ export class DeviceRepository {
                 },
             );
         return deviceRepository.affected > 0;
+    }
+
+    async deleteDevicesByUserId(userId: string): Promise<boolean> {
+        const deviceRepository = this.dataSource.getRepository(Device);
+
+        try {
+            await deviceRepository.update(
+                {
+                    userId: userId,
+                    exp: MoreThan(new Date()),
+                },
+                {
+                    exp: new Date(),
+                },
+            );
+            return true;
+        } catch (e) {
+            console.error('deleteDeviceByUserId error', e);
+            return false;
+        }
     }
 }

@@ -19,9 +19,12 @@ export class CommentsRepository {
         return await Comment.createComment(commentInputDto, user, post);
     }
     async findComment(commentId: string): Promise<Comment | null> {
-        return await this.commentRepo.findOne({
+        return this.commentRepo.findOne({
             where: {
                 id: commentId,
+                user: {
+                    isBanned: false,
+                },
             },
             relations: {
                 user: true,
@@ -36,6 +39,9 @@ export class CommentsRepository {
         const isUpdatedComment = await this.commentRepo.update(
             {
                 id: commentId,
+                user: {
+                    isBanned: false,
+                },
             },
             { content: commentInputDto.content },
         );

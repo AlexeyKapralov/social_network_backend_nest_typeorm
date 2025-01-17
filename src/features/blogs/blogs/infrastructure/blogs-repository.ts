@@ -10,12 +10,19 @@ export class BlogsRepository {
     constructor(@InjectRepository(Blog) private blogRepo: Repository<Blog>) {}
 
     async findBlog(blogId: string): Promise<Blog | null> {
-        return await this.blogRepo.findOne({ where: { id: blogId } });
+        return this.blogRepo.findOne({
+            where: {
+                id: blogId,
+                user: {
+                    isBanned: false,
+                },
+            },
+        });
     }
 
     async findBlogWithUser(blogId: string): Promise<Blog | null> {
-        return await this.blogRepo.findOne({
-            where: { id: blogId },
+        return this.blogRepo.findOne({
+            where: { id: blogId, user: { isBanned: false } },
             relations: { user: true },
         });
     }
@@ -36,6 +43,9 @@ export class BlogsRepository {
         const blog = await this.blogRepo.findOne({
             where: {
                 id: blogId,
+                user: {
+                    isBanned: false,
+                },
             },
         });
         if (!blog) {
@@ -52,6 +62,9 @@ export class BlogsRepository {
         const blog = await this.blogRepo.findOne({
             where: {
                 id: blogId,
+                user: {
+                    isBanned: false,
+                },
             },
         });
         if (!blog) {
@@ -66,6 +79,9 @@ export class BlogsRepository {
             await this.blogRepo.update(
                 {
                     id: blogId,
+                    user: {
+                        isBanned: false,
+                    },
                 },
                 {
                     user: {

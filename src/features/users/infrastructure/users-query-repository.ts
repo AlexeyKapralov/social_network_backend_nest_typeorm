@@ -13,9 +13,10 @@ export class UsersQueryRepository {
     async findUserByEmail(email: string): Promise<User> {
         const userRepository = this.dataSource.getRepository(User);
 
-        return await userRepository.findOne({
+        return userRepository.findOne({
             where: {
                 email: email,
+                isBanned: false,
                 isDeleted: false,
             },
         });
@@ -24,7 +25,7 @@ export class UsersQueryRepository {
     async findUserByConfirmationCode(confirmationCode: string): Promise<User> {
         const userRepository = this.dataSource.getRepository(User);
 
-        return await userRepository.findOne({
+        return userRepository.findOne({
             where: {
                 confirmationCode: confirmationCode,
                 isDeleted: false,
@@ -48,9 +49,10 @@ export class UsersQueryRepository {
     async findUserByLogin(login: string): Promise<User> {
         const userRepository = this.dataSource.getRepository(User);
 
-        return await userRepository.findOne({
+        return userRepository.findOne({
             where: {
                 login: login,
+                isBanned: false,
                 isDeleted: false,
             },
         });
@@ -105,7 +107,7 @@ export class UsersQueryRepository {
             loginTerm = '%%';
         }
 
-        return await userRepository
+        return userRepository
             .createQueryBuilder('u')
             .where(
                 'u.isDeleted = :isDeleted and u.isConfirmed = :isConfirmed',

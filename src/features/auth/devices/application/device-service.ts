@@ -8,7 +8,7 @@ import {
 
 @Injectable()
 export class DeviceService {
-    constructor(private deviceRepository: DeviceRepository) {}
+    constructor(private readonly deviceRepository: DeviceRepository) {}
     async createDeviceOrUpdate(
         userId: string,
         deviceName: string,
@@ -133,6 +133,23 @@ export class DeviceService {
         const newDate = new Date(Math.trunc(Date.now() / 1000) * 1000);
 
         await this.deviceRepository.updateDevice(deviceId, newDate, newDate);
+
+        return notice;
+    }
+
+    async deleteAllDevicesByUserId(userId: string): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const isDeviceDeleted =
+            await this.deviceRepository.deleteDevicesByUserId(userId);
+        if (!isDeviceDeleted) {
+            notice.addError(
+                'device was not deleted',
+                'device',
+                InterlayerStatuses.BAD_REQUEST,
+            );
+            return notice;
+        }
 
         return notice;
     }

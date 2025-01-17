@@ -43,6 +43,12 @@ export class User {
     @Exclude()
     isConfirmed: boolean;
 
+    @Column({ default: false })
+    isBanned: boolean;
+
+    @Column({ default: null })
+    banReason: string;
+
     @Column()
     @Exclude()
     confirmationCodeExpireDate: Date;

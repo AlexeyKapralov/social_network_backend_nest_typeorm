@@ -14,6 +14,9 @@ export class BlogsQueryRepository {
         const blog = await this.blogRepo.findOne({
             where: {
                 id: blogId,
+                user: {
+                    isBanned: false,
+                },
             },
         });
         if (!blog) {

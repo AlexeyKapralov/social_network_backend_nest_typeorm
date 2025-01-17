@@ -31,15 +31,21 @@ export class GetBlogsQuery
             ? (queryPayload.query.searchNameTerm = '%%')
             : (queryPayload.query.searchNameTerm = `%${queryPayload.query.searchNameTerm}%`);
 
-        let countBlogs = await this.blogRepo.count({
+        const countBlogs = await this.blogRepo.count({
             where: {
                 name: ILike(queryPayload.query.searchNameTerm),
+                user: {
+                    isBanned: false,
+                },
             },
         });
 
         const blogs = await this.blogRepo.find({
             where: {
                 name: ILike(queryPayload.query.searchNameTerm),
+                user: {
+                    isBanned: false,
+                },
             },
             relations: {
                 user: true,

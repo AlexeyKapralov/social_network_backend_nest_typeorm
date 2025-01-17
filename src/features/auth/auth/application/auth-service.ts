@@ -186,6 +186,7 @@ export class AuthService {
             registrationEmailResendingBody.email,
         );
         if (!user) {
+            notice.addError('user not found');
             return notice;
         }
         const newConfirmationCode = uuid();
@@ -200,6 +201,9 @@ export class AuthService {
                 newPassword,
             );
         if (!isUpdatedUser || !isUpdatedPassword) {
+            notice.addError(
+                'user password and confirmation code is not updated',
+            );
             return notice;
         }
         const html = `
@@ -255,7 +259,6 @@ export class AuthService {
     ): Promise<InterlayerNotice<TokensDto>> {
         const notice = new InterlayerNotice<TokensDto>();
 
-        let user: User;
         const userByLogin = await this.userQueryRepository.findUserByLogin(
             loginInputDto.loginOrEmail,
         );
@@ -263,10 +266,10 @@ export class AuthService {
             loginInputDto.loginOrEmail,
         );
         if (!userByLogin && !userByEmail) {
-            notice.addError('user did not find');
+            notice.addError('user did not find or user is banned');
             return notice;
         }
-        userByLogin ? (user = userByLogin) : (user = userByEmail);
+        const user: User = userByLogin || userByEmail;
 
         const isPasswordValid = await this.cryptoService.comparePasswordHash(
             loginInputDto.password,

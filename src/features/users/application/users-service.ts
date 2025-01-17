@@ -9,12 +9,19 @@ import {
 import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
 import { PaginatorDto } from '../../../common/dto/paginator-dto';
 import { UsersQueryRepository } from '../infrastructure/users-query-repository';
+import { BanUserInputDto } from '../api/dto/input/ban-user-input-dto';
+import { not } from 'rxjs/internal/util/not';
+import { DeviceService } from '../../auth/devices/application/device-service';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class UsersService {
     constructor(
-        private usersRepository: UsersRepository,
-        private usersQueryRepository: UsersQueryRepository,
+        private readonly usersRepository: UsersRepository,
+        private readonly usersQueryRepository: UsersQueryRepository,
+        private readonly deviceService: DeviceService,
+        @InjectDataSource() private readonly dataSource: DataSource,
     ) {}
 
     async createUser(
@@ -96,5 +103,81 @@ export class UsersService {
             return notice;
         }
         return notice;
+    }
+
+    async banUser(
+        userId: string,
+        banUserInputDto: BanUserInputDto,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+
+        const user = await this.usersRepository.findUser(userId);
+        if (!user) {
+            notice.addError('use not found', '', InterlayerStatuses.NOT_FOUND);
+            return notice;
+        }
+        if (banUserInputDto.isBanned) {
+            await queryRunner.startTransaction('REPEATABLE READ');
+
+            try {
+                const banResult = await this.usersRepository.banUser(
+                    userId,
+                    banUserInputDto.banReason,
+                );
+                if (!banResult) {
+                    notice.addError(
+                        'ban is not completed',
+                        '',
+                        InterlayerStatuses.BAD_REQUEST,
+                    );
+                    await queryRunner.rollbackTransaction();
+                    return notice;
+                }
+                const interlayerDeleteAllDevicesByUserId =
+                    await this.deviceService.deleteAllDevicesByUserId(userId);
+                if (interlayerDeleteAllDevicesByUserId.hasError()) {
+                    notice.addError(
+                        'devices are not deleted',
+                        '',
+                        InterlayerStatuses.BAD_REQUEST,
+                    );
+                    await queryRunner.rollbackTransaction();
+                    return notice;
+                }
+                await queryRunner.commitTransaction();
+                console.log('transaction for ban user was commited');
+                return notice;
+            } catch (e) {
+                await queryRunner.rollbackTransaction();
+                console.log('transaction for ban user was rollback');
+                return notice;
+            }
+        } else {
+            await queryRunner.startTransaction('REPEATABLE READ');
+
+            try {
+                const unbanResult =
+                    await this.usersRepository.unbanUser(userId);
+                if (!unbanResult) {
+                    notice.addError(
+                        'unban is not completed',
+                        '',
+                        InterlayerStatuses.BAD_REQUEST,
+                    );
+                    await queryRunner.rollbackTransaction();
+                    return notice;
+                }
+                await queryRunner.commitTransaction();
+                console.log('transaction for ban user was commited');
+                return notice;
+            } catch (e) {
+                await queryRunner.rollbackTransaction();
+                console.log('transaction for ban user was rollback');
+                return notice;
+            }
+        }
     }
 }

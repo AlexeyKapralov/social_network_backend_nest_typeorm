@@ -115,6 +115,9 @@ export class LikeRepository {
         likeComment = await this.dataSource
             .getRepository(Like)
             .createQueryBuilder('l')
+            .leftJoin('l.user', 'u', 'u.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('l."commentId" = :commentId', { commentId: parentId })
             .andWhere('l."userId" = :userId', { userId: userId })
             .getOne();
@@ -123,6 +126,9 @@ export class LikeRepository {
         likePost = await this.dataSource
             .getRepository(Like)
             .createQueryBuilder('l')
+            .leftJoin('l.user', 'u', 'u.isBanned = :isBanned', {
+                isBanned: false,
+            })
             .where('l."parentId" = :parentId', { parentId: parentId })
             .andWhere('l."userId" = :userId', { userId: userId })
             .getOne();

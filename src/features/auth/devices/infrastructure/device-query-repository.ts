@@ -7,7 +7,7 @@ import { toDeviceDtoMapper } from '../../../../base/mappers/device-mapper';
 
 @Injectable()
 export class DeviceQueryRepository {
-    constructor(@InjectDataSource() private dataSource: DataSource) {}
+    constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
     async findDeviceByIdAndIat(
         deviceId: string,

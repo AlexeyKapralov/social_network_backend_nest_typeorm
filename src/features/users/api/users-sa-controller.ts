@@ -8,6 +8,7 @@ import {
     HttpStatus,
     NotFoundException,
     Param,
+    ParseUUIDPipe,
     Post,
     Query,
     UseGuards,
@@ -17,10 +18,11 @@ import { UserInputDto } from './dto/input/user-input-dto';
 import { AuthGuard } from '@nestjs/passport';
 import { BasicAuthGuard } from '../../auth/auth/guards/basic-auth-guard';
 import { QueryDtoWithEmailLogin } from '../../../common/dto/query-dto';
+import { BanUserInputDto } from './dto/input/ban-user-input-dto';
 
 @Controller('sa/users')
 export class UsersSaController {
-    constructor(private userService: UsersService) {}
+    constructor(private readonly userService: UsersService) {}
 
     //можно так, а можно создать отдельный guard, который implement этот AuthGuard: @UseGuards(BasicAuthGuard)
     @UseGuards(AuthGuard('basic'))
@@ -58,10 +60,27 @@ export class UsersSaController {
     // @UseInterceptors(ClassSerializerInterceptor)//можно использовать для отдельного контроллера, а также это можно для всего приложения в main.ts
     @HttpCode(HttpStatus.NO_CONTENT)
     @Delete(':userId')
-    async deleteUser(@Param('userId') userId: string) {
+    async deleteUser(@Param('userId', ParseUUIDPipe) userId: string) {
         const interlayerDeletedUser = await this.userService.deleteUser(userId);
 
         if (interlayerDeletedUser.hasError()) {
+            throw new NotFoundException();
+        }
+    }
+
+    @UseGuards(BasicAuthGuard)
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @Post(':userId/ban')
+    async banUser(
+        @Param('userId', ParseUUIDPipe) userId: string,
+        @Body() banUserInputDto: BanUserInputDto,
+    ) {
+        const interlayerBanUser = await this.userService.banUser(
+            userId,
+            banUserInputDto,
+        );
+
+        if (interlayerBanUser.hasError()) {
             throw new NotFoundException();
         }
     }

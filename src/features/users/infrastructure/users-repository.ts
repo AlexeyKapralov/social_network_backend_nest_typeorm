@@ -33,11 +33,11 @@ export class UsersRepository {
         );
         user.isConfirmed = isConfirmed;
 
-        return await userRepository.save(user);
+        return userRepository.save(user);
     }
 
     async findUser(userId: string): Promise<User> {
-        return await this.dataSource.getRepository(User).findOne({
+        return this.dataSource.getRepository(User).findOne({
             where: {
                 id: userId,
                 isConfirmed: true,
@@ -120,5 +120,43 @@ export class UsersRepository {
             { isConfirmed: true },
         );
         return userResult.affected > 0;
+    }
+
+    async banUser(userId: string, banReason: string): Promise<boolean> {
+        try {
+            await this.dataSource.getRepository(User).update(
+                {
+                    id: userId,
+                    isDeleted: false,
+                },
+                {
+                    isBanned: true,
+                    banReason: banReason,
+                },
+            );
+            return true;
+        } catch (e) {
+            console.log('error', e);
+            return false;
+        }
+    }
+
+    async unbanUser(userId: string) {
+        try {
+            await this.dataSource.getRepository(User).update(
+                {
+                    id: userId,
+                    isDeleted: false,
+                },
+                {
+                    isBanned: false,
+                    banReason: null,
+                },
+            );
+            return true;
+        } catch (e) {
+            console.log('error', e);
+            return false;
+        }
     }
 }
