@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, LessThan, MoreThan } from 'typeorm';
+import { DataSource, MoreThan } from 'typeorm';
 import { Device } from '../domain/device-entity';
 import { DeviceViewDto } from '../api/output/device-view-dto';
 import { toDeviceDtoMapper } from '../../../../base/mappers/device-mapper';

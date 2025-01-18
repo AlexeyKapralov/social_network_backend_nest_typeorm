@@ -222,14 +222,6 @@ export class QuizService {
             );
             return notice;
         }
-        // if (existQuestion.published === false) {
-        //     notice.addError(
-        //         'question did not found',
-        //         'question',
-        //         InterlayerStatuses.BAD_REQUEST,
-        //     );
-        //     return notice;
-        // }
 
         // обновить
         const isUpdatedQuestion = await this.quizRepository.updateQuestion(

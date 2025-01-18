@@ -1,6 +1,6 @@
 import { IsEnum } from 'class-validator';
 
-export type EnvironmentVariable = { [key: string]: string | undefined }
+export type EnvironmentVariable = { [key: string]: string | undefined };
 
 export enum Environments {
     DEVELOPMENT = 'DEVELOPMENT',
@@ -10,11 +10,9 @@ export enum Environments {
 }
 
 export class EnvironmentSettings {
-    constructor(
-        private readonly environmentVariables: EnvironmentVariable,
-    ) {}
+    constructor(private readonly environmentVariables: EnvironmentVariable) {}
     @IsEnum(Environments)
-    private ENV = this.environmentVariables.ENV
+    private readonly ENV = this.environmentVariables.ENV;
     get isProduction() {
         return this.environmentVariables.ENV === Environments.PRODUCTION;
     }

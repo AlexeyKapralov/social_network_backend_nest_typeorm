@@ -31,8 +31,8 @@ import { PaginatorDto } from '../../../common/dto/paginator-dto';
 @Controller('sa/quiz')
 export class QuizSuperAdminController {
     constructor(
-        private quizService: QuizService,
-        private queryBus: QueryBus,
+        private readonly quizService: QuizService,
+        private readonly queryBus: QueryBus,
     ) {}
 
     @UseGuards(BasicAuthGuard)

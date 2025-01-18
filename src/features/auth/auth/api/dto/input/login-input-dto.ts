@@ -1,4 +1,4 @@
-import { IsString, IsStrongPassword } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class LoginInputDto {
     @IsString()

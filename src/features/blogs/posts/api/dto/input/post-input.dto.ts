@@ -1,4 +1,4 @@
-import { IsMongoId, IsUUID, Length } from 'class-validator';
+import { IsUUID, Length } from 'class-validator';
 import { Trim } from '../../../../../../common/decorators/transform/trim-decorator';
 
 export class PostInputDto {

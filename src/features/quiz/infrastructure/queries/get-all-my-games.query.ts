@@ -30,7 +30,7 @@ export class GetAllMyGamesQuery
         >
 {
     constructor(
-        @InjectDataSource() private dataSource: DataSource,
+        @InjectDataSource() private readonly dataSource: DataSource,
         @InjectRepository(Player)
         private readonly playerRepo: Repository<Player>,
         @InjectRepository(Game)

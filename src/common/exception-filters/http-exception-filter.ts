@@ -16,7 +16,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const status = exception.getStatus();
 
         switch (status) {
-            case HttpStatus.BAD_REQUEST:
+            case HttpStatus.BAD_REQUEST: {
                 const errorsResponse = [];
                 const responseBody: any = exception.getResponse();
 
@@ -32,6 +32,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
                     errorsMessages: errorsResponse,
                 });
                 break;
+            }
 
             case HttpStatus.UNAUTHORIZED:
             case HttpStatus.FORBIDDEN:

@@ -1,11 +1,4 @@
-import { IsEmail, IsString, Length, Matches } from 'class-validator';
-import {
-    CommandHandler,
-    EventBus,
-    ICommand,
-    ICommandHandler,
-} from '@nestjs/cqrs';
-import { v4 as uuid } from 'uuid';
+import { CommandHandler, ICommand, ICommandHandler } from '@nestjs/cqrs';
 import { RefreshTokenPayloadDto } from '../../../../../common/dto/refresh-token-payload-dto';
 import { InterlayerNotice } from '../../../../../base/models/interlayer';
 import { DeviceRepository } from '../../infrastructure/device-repository';
@@ -22,7 +15,7 @@ export class DeleteDevicesUseCase
 
     async execute(command: DeleteDevicesCommand): Promise<InterlayerNotice> {
         const notice = new InterlayerNotice();
-        const { iat, exp, deviceId } = command.refreshTokenPayloadDto;
+        const { iat, deviceId } = command.refreshTokenPayloadDto;
 
         const device = await this.deviceRepository.findDeviceByIdAndIat(
             deviceId,

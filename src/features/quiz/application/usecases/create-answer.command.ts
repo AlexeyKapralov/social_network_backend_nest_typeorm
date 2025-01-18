@@ -161,8 +161,9 @@ export class CreateAnswerUseCase
                     game.id,
                 );
             if (isCurrentUserFasterThanAnotherPlayer) {
-                if (currentPlayerCountCorrectAnswers > 0)
+                if (currentPlayerCountCorrectAnswers > 0) {
                     await this.quizRepository.addScore(player.id);
+                }
             } else if (anotherPlayerCountCorrectAnswers > 0) {
                 await this.quizRepository.addScore(anotherPlayerId);
             }

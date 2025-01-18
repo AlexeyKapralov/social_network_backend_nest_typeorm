@@ -9,7 +9,6 @@ import { QuestionViewDto } from '../../api/dto/output/question-view.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Question } from '../../domain/question.entity';
 import { Repository } from 'typeorm';
-import { LikeStatus } from '../../../blogs/likes/api/dto/output/likes-view.dto';
 import { questionViewMapper } from '../../../../base/mappers/question-view-mapper';
 
 export class GetQuestionsPayload implements IQuery {
@@ -25,7 +24,8 @@ export class GetQuestionsQuery
         >
 {
     constructor(
-        @InjectRepository(Question) private questionRepo: Repository<Question>,
+        @InjectRepository(Question)
+        private readonly questionRepo: Repository<Question>,
     ) {}
 
     async execute(

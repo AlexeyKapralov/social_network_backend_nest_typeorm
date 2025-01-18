@@ -9,7 +9,8 @@ import { Post } from '../../posts/domain/posts.entity';
 @Injectable()
 export class CommentsRepository {
     constructor(
-        @InjectRepository(Comment) private commentRepo: Repository<Comment>,
+        @InjectRepository(Comment)
+        private readonly commentRepo: Repository<Comment>,
     ) {}
     async createComment(
         commentInputDto: CommentInputDto,

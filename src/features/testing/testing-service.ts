@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class TestingService {
-    constructor(@InjectDataSource() private datasource: DataSource) {}
+    constructor(@InjectDataSource() private readonly datasource: DataSource) {}
 
     async clearAll() {
         await this.datasource.query(`

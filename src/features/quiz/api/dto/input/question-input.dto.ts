@@ -1,11 +1,4 @@
-import {
-    ArrayNotEmpty,
-    IsArray,
-    IsNotEmpty,
-    IsString,
-    Length,
-    ValidateNested,
-} from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsString, Length } from 'class-validator';
 import { Trim } from '../../../../../common/decorators/transform/trim-decorator';
 
 export class QuestionInputDto {

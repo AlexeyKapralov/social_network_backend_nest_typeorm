@@ -3,11 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Blog } from '../domain/blog-entity';
 import { Repository } from 'typeorm';
 import { BlogInputDto } from '../api/dto/input/blog-input-dto';
-import { PostsRepository } from '../../posts/infrastructure/posts.repository';
 
 @Injectable()
 export class BlogsRepository {
-    constructor(@InjectRepository(Blog) private blogRepo: Repository<Blog>) {}
+    constructor(
+        @InjectRepository(Blog) private readonly blogRepo: Repository<Blog>,
+    ) {}
 
     async findBlog(blogId: string): Promise<Blog | null> {
         return this.blogRepo.findOne({

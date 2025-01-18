@@ -20,8 +20,8 @@ export class RefreshTokensUseCase
         >
 {
     constructor(
-        private deviceService: DeviceService,
-        private authService: AuthService,
+        private readonly deviceService: DeviceService,
+        private readonly authService: AuthService,
     ) {}
 
     async execute(

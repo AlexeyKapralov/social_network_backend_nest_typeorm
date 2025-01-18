@@ -8,8 +8,8 @@ import { Blog } from '../../blogs/domain/blog-entity';
 @Injectable()
 export class PostsRepository {
     constructor(
-        @InjectDataSource() private dataSource: DataSource,
-        @InjectRepository(Post) private postRepo: Repository<Post>,
+        @InjectDataSource() private readonly dataSource: DataSource,
+        @InjectRepository(Post) private readonly postRepo: Repository<Post>,
     ) {}
 
     async checkIsPostBelongBlog(

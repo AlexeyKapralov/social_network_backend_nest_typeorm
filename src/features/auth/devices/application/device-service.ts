@@ -86,8 +86,8 @@ export class DeviceService {
 
         const isUpdated = await this.deviceRepository.updateDevice(
             deviceId,
-            iat,
             exp,
+            iat,
         );
         if (!isUpdated) {
             notice.addError('device did not update');

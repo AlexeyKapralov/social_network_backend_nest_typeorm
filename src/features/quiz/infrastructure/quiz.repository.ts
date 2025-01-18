@@ -725,11 +725,6 @@ export class QuizRepository {
 
         try {
             const playerRepository = queryRunner.manager.getRepository(Player);
-            // const player = await playerRepository
-            //     .createQueryBuilder('player')
-            //     .where('id = :playerId', { playerId: playerId })
-            //     .setLock('pessimistic_write')
-            //     .getOne();
 
             const player = await playerRepository.findOne({
                 where: {

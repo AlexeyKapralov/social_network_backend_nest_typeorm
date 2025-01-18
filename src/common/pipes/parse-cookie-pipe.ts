@@ -1,7 +1,6 @@
 import {
     ArgumentMetadata,
     Injectable,
-    NotFoundException,
     PipeTransform,
     UnauthorizedException,
 } from '@nestjs/common';
@@ -18,8 +17,8 @@ export class ParseCookiePipe
         >
 {
     constructor(
-        private jwtService: JwtService,
-        private deviceService: DeviceService,
+        private readonly jwtService: JwtService,
+        private readonly deviceService: DeviceService,
     ) {}
 
     async transform(
@@ -33,7 +32,9 @@ export class ParseCookiePipe
             throw new UnauthorizedException();
         }
 
-        if (!refreshTokenPayload) throw new UnauthorizedException();
+        if (!refreshTokenPayload) {
+            throw new UnauthorizedException();
+        }
 
         refreshTokenPayload.exp = new Date(
             Number(refreshTokenPayload.exp) * 1000,
@@ -48,7 +49,9 @@ export class ParseCookiePipe
                 refreshTokenPayload.iat,
             );
 
-        if (checkingInterlayer.hasError()) throw new UnauthorizedException();
+        if (checkingInterlayer.hasError()) {
+            throw new UnauthorizedException();
+        }
 
         return refreshTokenPayload;
     }

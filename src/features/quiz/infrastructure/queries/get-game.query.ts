@@ -30,9 +30,10 @@ export class GetGameQuery
         IQueryHandler<GetGamePayload, InterlayerNotice<GetGameResultType>>
 {
     constructor(
-        @InjectRepository(Game) private gameRepo: Repository<Game>,
-        @InjectRepository(Answer) private answerRepo: Repository<Answer>,
-        private quizRepository: QuizRepository,
+        @InjectRepository(Game) private readonly gameRepo: Repository<Game>,
+        @InjectRepository(Answer)
+        private readonly answerRepo: Repository<Answer>,
+        private readonly quizRepository: QuizRepository,
     ) {}
 
     async execute(
@@ -118,25 +119,6 @@ export class GetGameQuery
             .addGroupBy('g."startedAt"')
             .addGroupBy('g."finishedAt"');
 
-        // const player1AnswersQuery = this.answerRepo
-        //     .createQueryBuilder('a')
-        //     .leftJoinAndSelect(Game, 'g', `g.id = a."gameId"`)
-        //     .select([
-        //         `
-        //         JSON_AGG(
-        //             JSON_BUILD_OBJECT(
-        //                 'questionId', a."questionId",
-        //                 'answerStatus', a.status,
-        //                 'addedAt', a."createdAt"
-        //             )
-        //         ) "answers"
-        //         `,
-        //     ])
-        //     .where('a."gameId" = :gameId', { gameId: query.gameId })
-        //     .andWhere('a."playerId" = :playerId', {
-        //         playerId: game.player_1_id,
-        //     });
-
         const player1AnswersQuery = this.answerRepo
             .createQueryBuilder('a')
             .leftJoinAndSelect(Game, 'g', `g.id = a."gameId"`)
@@ -202,18 +184,6 @@ export class GetGameQuery
             gameWithPlayersAndQuestions.secondPlayerProgress['answers'] =
                 player2Answers.answers || [];
         }
-
-        //todo мб это кал и не нужно, но я попробую
-        // gameWithPlayersAndQuestions.firstPlayerProgress = {
-        //     answers: gameWithPlayersAndQuestions.firstPlayerProgress.answers,
-        //     player: gameWithPlayersAndQuestions.firstPlayerProgress.player,
-        //     score: gameWithPlayersAndQuestions.firstPlayerProgress.score,
-        // };
-        // gameWithPlayersAndQuestions.secondPlayerProgress = {
-        //     answers: gameWithPlayersAndQuestions.secondPlayerProgress.answers,
-        //     player: gameWithPlayersAndQuestions.secondPlayerProgress.player,
-        //     score: gameWithPlayersAndQuestions.secondPlayerProgress.score,
-        // };
 
         notice.addData(gameWithPlayersAndQuestions);
         return notice;
