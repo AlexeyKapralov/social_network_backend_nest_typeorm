@@ -14,6 +14,15 @@ export enum SortField {
     finishGameDate = 'finishGameDate',
 }
 
+export enum SortFieldForBlogs {
+    id = 'id',
+    name = 'name',
+    createdAt = 'createdAt',
+    description = 'description',
+    isMembership = 'isMembership',
+    websiteUrl = 'websiteUrl',
+}
+
 export enum BanStatus {
     all = 'all',
     banned = 'banned',
@@ -78,4 +87,11 @@ export class QueryDtoWithName extends QueryDto {
 export class QueryDtoWithBan extends QueryDtoWithEmailLogin {
     @IsEnum(BanStatus)
     banStatus: BanStatus = BanStatus.all;
+}
+
+export class QueryDtoForBlogs extends QueryDto {
+    @IsString()
+    @IsEnum(SortFieldForBlogs)
+    sortBy: SortFieldForBlogs = SortFieldForBlogs.createdAt;
+    searchNameTerm: string = null;
 }

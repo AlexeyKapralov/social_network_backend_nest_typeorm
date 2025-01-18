@@ -17,37 +17,35 @@ import {
 } from '@nestjs/common';
 import { BlogPostInputDto } from './dto/input/blog-post-input.dto';
 import { BlogsService } from '../application/blogs-service';
-import { BlogsQueryRepository } from '../infrastructure/blogs-query-repository';
-import { QueryDto, QueryDtoWithName } from '../../../../common/dto/query-dto';
-import { GetBlogsPayload } from '../infrastructure/queries/get-blogs-query';
+import { QueryDto, QueryDtoForBlogs } from '../../../../common/dto/query-dto';
 import { InterlayerNotice } from '../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../common/dto/paginator-dto';
-import { BlogViewDto } from './dto/output/blog-view-dto';
 import { QueryBus } from '@nestjs/cqrs';
 import { BasicAuthGuard } from '../../../auth/auth/guards/basic-auth-guard';
 import { BlogInputDto } from './dto/input/blog-input-dto';
 import {
-    GetPostsResultType,
     GetPostsForBlogPayload,
+    GetPostsResultType,
 } from '../../posts/infrastructure/queries/get-posts-for-blog.query';
+import { BanUserSaInfoViewDto } from '../../../users/api/dto/input/ban-user-input-dto';
+import { GetBlogsForAdminPayload } from '../infrastructure/queries/get-blogs-for-admin-query';
+import { BlogWithBanInfoViewDto } from './dto/output/blog-with-ban-info-view-dto';
 
 @Controller('sa/blogs')
 export class BlogsSaController {
     constructor(
         private readonly blogsService: BlogsService,
-        private readonly blogQueryRepository: BlogsQueryRepository,
-        // private readonly postQueryRepository: PostsQueryRepository,
         private readonly queryBus: QueryBus,
     ) {}
 
     @UseGuards(BasicAuthGuard)
     @Get()
     @HttpCode(HttpStatus.OK)
-    async getBlogs(@Query() query: QueryDtoWithName) {
-        const queryPayload = new GetBlogsPayload(query);
+    async getBlogs(@Query() query: QueryDtoForBlogs) {
+        const queryPayload = new GetBlogsForAdminPayload(query);
         const getBlogsResult = await this.queryBus.execute<
-            GetBlogsPayload,
-            InterlayerNotice<PaginatorDto<BlogViewDto>>
+            GetBlogsForAdminPayload,
+            InterlayerNotice<PaginatorDto<BlogWithBanInfoViewDto>>
         >(queryPayload);
         return getBlogsResult.data;
     }
@@ -158,6 +156,28 @@ export class BlogsSaController {
         );
         if (isDeletedInterLayer.hasError()) {
             throw new NotFoundException();
+        }
+    }
+    @UseGuards(BasicAuthGuard)
+    @Put(':blogId/ban')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async banBlog(
+        @Param('blogId', ParseUUIDPipe) blogId: string,
+        @Body() query: BanUserSaInfoViewDto,
+    ) {
+        const banBlogInterlayer = await this.blogsService.banBlog(
+            blogId,
+            query.isBanned,
+        );
+        if (banBlogInterlayer.hasError()) {
+            throw new BadRequestException(
+                banBlogInterlayer.extensions.map((e) => {
+                    return {
+                        message: e.message,
+                        field: e.key,
+                    };
+                }),
+            );
         }
     }
 

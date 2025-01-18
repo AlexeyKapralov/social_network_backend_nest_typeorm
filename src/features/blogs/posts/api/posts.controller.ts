@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    ForbiddenException,
     Get,
     HttpCode,
     HttpStatus,
@@ -33,6 +34,7 @@ import { LikeInputDto } from '../../likes/api/dto/input/like-input.dto';
 import { PostsService } from '../application/posts.service';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { InterlayerStatuses } from '../../../../base/models/interlayer';
 
 @Controller('posts')
 export class PostsController {
@@ -104,6 +106,12 @@ export class PostsController {
             );
 
         if (createCommentInterlayer.hasError()) {
+            if (
+                createCommentInterlayer.extensions[0].code ===
+                InterlayerStatuses.FORBIDDEN
+            ) {
+                throw new ForbiddenException();
+            }
             throw new NotFoundException();
         }
         return createCommentInterlayer.data;

@@ -28,6 +28,20 @@ export class GetOnePostForBlogQuery
     async execute(
         queryPayload: GetOnePostForBlogPayload,
     ): Promise<GetOnePostResultType> {
+        const bannedBlogByPost = await this.dataSource.query(
+            `
+            select p.*, b.id from post p 
+            left join blog b on b.id = p."blogId"
+            left join blog_blacklist bb on bb."blogId" = b.id 
+            where bb.id is not null 
+            and p.id = $1
+            and b.id = $2
+        `,
+            [queryPayload.postId, queryPayload.blogId],
+        );
+        if (bannedBlogByPost.length) {
+            return null;
+        }
         let foundBlog;
         try {
             foundBlog = await this.blogQueryRepository.findBlog(

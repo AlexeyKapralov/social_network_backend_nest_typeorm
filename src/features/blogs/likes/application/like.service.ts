@@ -91,7 +91,8 @@ export class LikeService {
                     SELECT l."commentId", COUNT(*) AS likes_count
                     FROM "like" l
                     INNER JOIN "user" u ON l."userId" = u.id AND u."isBanned" = FALSE
-                    WHERE l."likeStatus" = 'Like'
+                    left join blog_blacklist b on b."userId" = l."userId"
+                    WHERE l."likeStatus" = 'Like' and b.id is null
                     GROUP BY l."commentId"
                 ) subquery ON p."commentId" = subquery."commentId"
             ) subquery
@@ -115,7 +116,8 @@ export class LikeService {
                     SELECT l."commentId", COUNT(*) AS likes_count
                     FROM "like" l
                     INNER JOIN "user" u ON l."userId" = u.id AND u."isBanned" = FALSE
-                    WHERE l."likeStatus" = 'Dislike'
+                    left join blog_blacklist b on b."userId" = l."userId"
+                    WHERE l."likeStatus" = 'Dislike' and b.id is null
                     GROUP BY l."commentId"
                 ) subquery ON p."commentId" = subquery."commentId"
             ) subquery
@@ -139,7 +141,8 @@ export class LikeService {
                     SELECT l."parentId", COUNT(*) AS likes_count
                     FROM "like" l
                     INNER JOIN "user" u ON l."userId" = u.id AND u."isBanned" = FALSE
-                    WHERE l."likeStatus" = 'Like'
+                    left join blog_blacklist b on b."userId" = l."userId"
+                    WHERE l."likeStatus" = 'Like' and b.id is null
                     GROUP BY l."parentId"
                 ) subquery ON p."parentId" = subquery."parentId"
             ) subquery
@@ -163,7 +166,8 @@ export class LikeService {
                     SELECT l."parentId", COUNT(*) AS likes_count
                     FROM "like" l
                     INNER JOIN "user" u ON l."userId" = u.id AND u."isBanned" = FALSE
-                    WHERE l."likeStatus" = 'Dislike'
+                    left join blog_blacklist b on b."userId" = l."userId"
+                    WHERE l."likeStatus" = 'Dislike' and b.id is null
                     GROUP BY l."parentId"
                 ) subquery ON p."parentId" = subquery."parentId"
             ) subquery

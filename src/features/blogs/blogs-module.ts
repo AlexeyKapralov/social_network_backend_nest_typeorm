@@ -29,10 +29,12 @@ import { LikeRepository } from './likes/repository/like.repository';
 import { BloggerController } from './blogs/api/blogger-controller';
 import { BloggerService } from './blogs/application/blogger-service';
 import { GetBlogsForUserQuery } from './blogs/infrastructure/queries/get-blogs-for-user-query';
+import { BlogBlacklist } from './blogs/domain/blog-blacklist-entity';
+import { GetBlogsForAdminQuery } from './blogs/infrastructure/queries/get-blogs-for-admin-query';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Blog, Post, Like, Comment]),
+        TypeOrmModule.forFeature([Blog, Post, Like, Comment, BlogBlacklist]),
         CqrsModule,
     ],
     controllers: [
@@ -62,6 +64,7 @@ import { GetBlogsForUserQuery } from './blogs/infrastructure/queries/get-blogs-f
         GetOneCommentQuery,
         GetCommentsForPostQuery,
         GetBlogsForUserQuery,
+        GetBlogsForAdminQuery,
     ],
     exports: [
         BlogsService,

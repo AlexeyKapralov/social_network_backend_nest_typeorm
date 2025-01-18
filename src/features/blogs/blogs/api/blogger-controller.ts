@@ -35,6 +35,7 @@ import { AccessTokenPayloadDto } from '../../../../common/dto/access-token-paylo
 import { BloggerService } from '../application/blogger-service';
 import { GetBlogsForUserPayload } from '../infrastructure/queries/get-blogs-for-user-query';
 import { ValidateJwtGuard } from '../../../auth/auth/guards/validate-jwt-guard';
+import { JwtAuthGuard } from '../../../auth/auth/guards/jwt-auth-guard';
 
 @Controller('blogger/blogs')
 export class BloggerController {
@@ -62,11 +63,11 @@ export class BloggerController {
         return getBlogsResult.data;
     }
 
-    @UseGuards(ValidateJwtGuard)
+    @UseGuards(JwtAuthGuard)
     @Post()
     @HttpCode(HttpStatus.CREATED)
     async createBlog(@Req() req: any, @Body() blogInputDto: BlogInputDto) {
-        const accessTokenPayload: AccessTokenPayloadDto = req.user;
+        const accessTokenPayload: AccessTokenPayloadDto = req.user['payload'];
         if (!accessTokenPayload.userId) {
             throw new UnauthorizedException();
         }

@@ -5,10 +5,12 @@ import {
     Entity,
     JoinColumn,
     ManyToOne,
+    OneToMany,
     PrimaryGeneratedColumn,
 } from 'typeorm';
 import { BlogInputDto } from '../api/dto/input/blog-input-dto';
 import { User } from '../../../users/domain/user-entity';
+import { BlogBlacklist } from './blog-blacklist-entity';
 
 @Entity()
 export class Blog extends BaseEntity {
@@ -39,6 +41,10 @@ export class Blog extends BaseEntity {
     @ManyToOne(() => User)
     @JoinColumn({ name: 'ownerId' })
     user: User;
+
+    @OneToMany(() => BlogBlacklist, (blogBlacklist) => blogBlacklist.blog)
+    @JoinColumn({ name: 'blogBlacklistId' })
+    blogBlacklist: BlogBlacklist[];
 
     static async createBlog(blogInputDto: BlogInputDto): Promise<Blog> {
         const blog = new Blog();

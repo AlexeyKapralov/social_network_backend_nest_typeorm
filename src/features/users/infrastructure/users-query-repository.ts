@@ -2,9 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, MoreThan } from 'typeorm';
 import { User } from '../domain/user-entity';
-import { BanStatus, QueryDtoWithBan } from '../../../common/dto/query-dto';
-import { UserViewDto } from '../api/dto/output/user-view-dto';
+import {
+    BanStatus,
+    QueryDtoWithBan,
+    QueryDtoWithLogin,
+} from '../../../common/dto/query-dto';
+import {
+    BannedUserViewDto,
+    UserViewDto,
+} from '../api/dto/output/user-view-dto';
 import { toUserViewDtoMapper } from '../../../base/mappers/user-view-mapper';
+import { BlogBlacklist } from '../../blogs/blogs/domain/blog-blacklist-entity';
+import { toBannedUserViewDtoMapper } from '../../../base/mappers/banned-user-view-mapper';
 
 @Injectable()
 export class UsersQueryRepository {
@@ -93,8 +102,8 @@ export class UsersQueryRepository {
                 },
             )
             .orderBy(`"${query.sortBy}"`, query.sortDirection)
-            .take(query.pageSize)
-            .skip((query.pageNumber - 1) * query.pageSize);
+            .limit(query.pageSize)
+            .offset((query.pageNumber - 1) * query.pageSize);
 
         if (query.banStatus !== BanStatus.all) {
             dbQuery.andWhere('u.isBanned = :isBanned', {
@@ -146,5 +155,68 @@ export class UsersQueryRepository {
         }
 
         return dbQuery.getCount();
+    }
+
+    async getCountBannedUsers(
+        query: QueryDtoWithLogin,
+        blogId: string,
+    ): Promise<number> {
+        const blogBlacklistRepository =
+            this.dataSource.getRepository(BlogBlacklist);
+
+        query.searchLoginTerm =
+            query.searchLoginTerm === null
+                ? ''
+                : `%${query.searchLoginTerm.toLowerCase()}%`;
+
+        query.searchLoginTerm = query.searchLoginTerm === '' && '%%';
+
+        const dbQuery = blogBlacklistRepository
+            .createQueryBuilder('u')
+            .where('u.blogId = :blogId', {
+                blogId: blogId,
+            });
+
+        return dbQuery.getCount();
+    }
+
+    async findBannedUsers(
+        query: QueryDtoWithLogin,
+        blogId: string,
+    ): Promise<BannedUserViewDto[]> {
+        const blogBlacklistRepository =
+            this.dataSource.getRepository(BlogBlacklist);
+
+        let loginTerm =
+            query.searchLoginTerm === null
+                ? ''
+                : `%${query.searchLoginTerm.toLowerCase()}%`;
+
+        if (loginTerm === '') {
+            loginTerm = '%%';
+        }
+
+        const users = await blogBlacklistRepository.query(
+            `
+            select 
+                u.id, u.login, bb."banReason", true as "isBanned", bb."banDate"  
+            from blog_blacklist bb
+            left join "user" u on u.id = bb."userId" 
+            where bb."blogId" = $1 and LOWER(u.login) like $4
+            order by "${query.sortBy}" ${query.sortDirection}
+            offset $2
+            limit $3    
+            `,
+            [
+                blogId,
+                (query.pageNumber - 1) * query.pageSize,
+                query.pageSize,
+                loginTerm,
+            ],
+        );
+
+        return users.map((i) => {
+            return toBannedUserViewDtoMapper(i);
+        });
     }
 }

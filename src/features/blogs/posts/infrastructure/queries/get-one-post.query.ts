@@ -25,6 +25,20 @@ export class GetOnePostQuery
     async execute(
         queryPayload: GetOnePostPayload,
     ): Promise<GetOnePostResultType | null> {
+        const bannedBlogByPost = await this.dataSource.query(
+            `
+            select p.*, b.id from post p 
+            left join blog b on b.id = p."blogId"
+            left join blog_blacklist bb on bb."blogId" = b.id 
+            where bb.id is not null 
+            and p.id = $1
+        `,
+            [queryPayload.postId],
+        );
+        console.log('bannedBlogByPost', bannedBlogByPost);
+        if (bannedBlogByPost.length) {
+            return null;
+        }
         const likes = this.dataSource
             .getRepository(Like)
             .createQueryBuilder('like')

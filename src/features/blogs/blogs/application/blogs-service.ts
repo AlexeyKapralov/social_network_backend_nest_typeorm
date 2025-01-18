@@ -9,17 +9,20 @@ import {
 import { blogViewDtoMapper } from '../../../../base/mappers/blog-view-mapper';
 import { BlogPostInputDto } from '../api/dto/input/blog-post-input.dto';
 import { PostsRepository } from '../../posts/infrastructure/posts.repository';
-import { PostsQueryRepository } from '../../posts/infrastructure/posts-query.repository';
 import { PostsViewDto } from '../../posts/api/dto/output/extended-likes-info-view.dto';
 import { LikeStatus } from '../../likes/api/dto/output/likes-view.dto';
 import { UsersQueryRepository } from '../../../users/infrastructure/users-query-repository';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { BlogBlacklist } from '../domain/blog-blacklist-entity';
 
 @Injectable()
 export class BlogsService {
     constructor(
-        private blogsRepository: BlogsRepository,
-        private postsRepository: PostsRepository,
+        private readonly blogsRepository: BlogsRepository,
+        private readonly postsRepository: PostsRepository,
         private readonly usersQueryRepository: UsersQueryRepository,
+        @InjectDataSource() private readonly dataSource: DataSource,
     ) {}
 
     async createBlog(
@@ -182,5 +185,78 @@ export class BlogsService {
         }
 
         return notice;
+    }
+
+    async banBlog(
+        blogId: string,
+        isBanned: boolean,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+        const blogBlacklistRepository =
+            this.dataSource.getRepository(BlogBlacklist);
+
+        let bannedBlog: BlogBlacklist;
+        if (isBanned) {
+            const blog = await this.blogsRepository.findBlog(blogId);
+            if (!blog) {
+                notice.addError(
+                    'blog is not found',
+                    'blogId',
+                    InterlayerStatuses.NOT_FOUND,
+                );
+                return notice;
+            }
+            bannedBlog = await blogBlacklistRepository.findOne({
+                where: {
+                    blogId: blogId,
+                    userId: null,
+                },
+            });
+            if (bannedBlog) {
+                return notice;
+            }
+
+            const newBlogBlacklist = new BlogBlacklist();
+            newBlogBlacklist.banReason = 'admin decision';
+            newBlogBlacklist.banDate = new Date();
+            newBlogBlacklist.blogId = blogId;
+
+            try {
+                await blogBlacklistRepository.insert(newBlogBlacklist);
+                return notice;
+            } catch (error) {
+                notice.addError('block was not added in blacklist');
+                return notice;
+            }
+        } else {
+            const blog = await this.blogsRepository.findBlog(blogId);
+            if (!blog) {
+                notice.addError(
+                    'blog is not found',
+                    '',
+                    InterlayerStatuses.NOT_FOUND,
+                );
+                return notice;
+            }
+            bannedBlog = await blogBlacklistRepository.findOne({
+                where: {
+                    blogId: blogId,
+                    userId: null,
+                },
+            });
+            if (!bannedBlog) {
+                return notice;
+            }
+
+            try {
+                await blogBlacklistRepository.delete({
+                    id: bannedBlog.id,
+                });
+                return notice;
+            } catch (error) {
+                notice.addError('block was not delete from blacklist');
+                return notice;
+            }
+        }
     }
 }

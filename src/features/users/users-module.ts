@@ -9,10 +9,11 @@ import { CryptoService } from '../../base/services/crypto-service';
 import { DeviceService } from '../auth/devices/application/device-service';
 import { DeviceRepository } from '../auth/devices/infrastructure/device-repository';
 import BlogsModule from '../blogs/blogs-module';
+import { BloggerUsersController } from './api/blogger-users-controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([User]), BlogsModule],
-    controllers: [UsersSaController],
+    controllers: [UsersSaController, BloggerUsersController],
     providers: [
         UsersService,
         UsersRepository,

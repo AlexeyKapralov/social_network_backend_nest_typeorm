@@ -5,6 +5,8 @@ import { UserInputDto } from '../api/dto/input/user-input-dto';
 import { User } from '../domain/user-entity';
 import { v4 as uuid } from 'uuid';
 import { CryptoService } from '../../../base/services/crypto-service';
+import { Blog } from '../../blogs/blogs/domain/blog-entity';
+import { BlogBlacklist } from '../../blogs/blogs/domain/blog-blacklist-entity';
 
 @Injectable()
 export class UsersRepository {
@@ -155,6 +157,66 @@ export class UsersRepository {
                     banDate: null,
                 },
             );
+            return true;
+        } catch (e) {
+            console.log('error', e);
+            return false;
+        }
+    }
+
+    async getBlog(ownerId: string, blogId: string) {
+        const blogRepo = this.dataSource.getRepository(Blog);
+        return blogRepo.find({
+            where: {
+                ownerId: ownerId,
+                id: blogId,
+            },
+            select: {
+                id: true,
+            },
+        });
+    }
+
+    async banUserForBlogs(
+        blogs: Blog[],
+        userId: string,
+        banReason: string,
+    ): Promise<boolean> {
+        try {
+            await this.unbanUserForBlogs(blogs, userId);
+            const values = blogs.map((blog) => ({
+                blogId: blog.id,
+                userId: userId,
+                banReason: banReason,
+                banDate: new Date(),
+            }));
+            await this.dataSource
+                .createQueryBuilder()
+                .insert()
+                .into(BlogBlacklist)
+                .values(values)
+                .execute();
+
+            return true;
+        } catch (e) {
+            console.log('error', e);
+            return false;
+        }
+    }
+
+    async unbanUserForBlogs(blogs: Blog[], userId: string) {
+        try {
+            const values = [];
+            blogs.forEach((blog) => values.push(blog.id));
+            await this.dataSource
+                .createQueryBuilder()
+                .delete()
+                .from(BlogBlacklist)
+                .where('userId = :userId', { userId: userId })
+                .andWhere('blogId IN (:...blogIdArray)', {
+                    blogIdArray: values,
+                })
+                .execute();
             return true;
         } catch (e) {
             console.log('error', e);

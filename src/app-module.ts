@@ -22,6 +22,7 @@ import { Game } from './features/quiz/domain/game.entity';
 import { GameQuestion } from './features/quiz/domain/game-question.entity';
 import { Player } from './features/quiz/domain/player.entity';
 import { Question } from './features/quiz/domain/question.entity';
+import { BlogBlacklist } from './features/blogs/blogs/domain/blog-blacklist-entity';
 
 @Global()
 @Module({
@@ -60,6 +61,7 @@ import { Question } from './features/quiz/domain/question.entity';
                     GameQuestion,
                     Player,
                     Question,
+                    BlogBlacklist,
                 ];
 
                 const dbPassword = databaseSettings.POSTGRES_PASSWORD;

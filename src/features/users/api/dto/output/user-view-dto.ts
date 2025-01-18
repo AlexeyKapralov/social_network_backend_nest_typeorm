@@ -7,3 +7,9 @@ export class UserViewDto {
     createdAt: Date;
     banInfo: BanUserInfoViewDto;
 }
+
+export class BannedUserViewDto {
+    id: string;
+    login: string;
+    banInfo: BanUserInfoViewDto;
+}

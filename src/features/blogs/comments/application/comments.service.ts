@@ -26,6 +26,7 @@ import { PaginatorDto } from '../../../../common/dto/paginator-dto';
 import { LikeInputDto } from '../../likes/api/dto/input/like-input.dto';
 import { LikeStatus } from '../../likes/api/dto/output/likes-view.dto';
 import { LikeService } from '../../likes/application/like.service';
+import { BlogBlacklist } from '../../blogs/domain/blog-blacklist-entity';
 
 @Injectable()
 export class CommentsService {
@@ -55,15 +56,29 @@ export class CommentsService {
             );
             return notice;
         }
-
-        const post = await this.dataSource
-            .getRepository(Post)
-            .findOne({ where: { id: postId } });
+        const post = await this.dataSource.getRepository(Post).findOne({
+            where: { id: postId },
+            relations: {
+                blog: true,
+            },
+        });
         if (!post) {
             notice.addError(
                 'post does not exist',
                 'post',
                 InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        const bannedBlog = await this.dataSource
+            .getRepository(BlogBlacklist)
+            .findOne({ where: { blogId: post.blog.id, userId: userId } });
+        if (bannedBlog) {
+            notice.addError(
+                'post in blog that in ban',
+                'blog',
+                InterlayerStatuses.FORBIDDEN,
             );
             return notice;
         }

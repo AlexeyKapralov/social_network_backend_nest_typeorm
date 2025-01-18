@@ -7,7 +7,7 @@ import {
     Req,
     UseGuards,
 } from '@nestjs/common';
-import { QueryDto, QueryDtoWithName } from '../../../../common/dto/query-dto';
+import { QueryDto, QueryDtoForBlogs } from '../../../../common/dto/query-dto';
 import { QueryBus } from '@nestjs/cqrs';
 import { GetBlogsPayload } from '../infrastructure/queries/get-blogs-query';
 import { InterlayerNotice } from '../../../../base/models/interlayer';
@@ -28,7 +28,7 @@ export class BlogsController {
     ) {}
 
     @Get()
-    async getBlogs(@Query() query: QueryDtoWithName) {
+    async getBlogs(@Query() query: QueryDtoForBlogs) {
         const queryPayload = new GetBlogsPayload(query);
         const getBlogsInterlayer = await this.queryBus.execute<
             GetBlogsPayload,
