@@ -1,9 +1,15 @@
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
+
 volumes:
   pg_data:
 
 services:
   postgres:
-    container_name: postgres_container_incubator
+    container_name: postgres
     image: postgres:15.1-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB_NAME}
@@ -23,7 +29,8 @@ services:
       - -c
       - max_connections=200
   back:
-    build: .
+    container_name: back
+    image: back
     environment:
       POSTGRESQL_CONNECTION_URI: ${POSTGRESQL_CONNECTION_URI}
       ENV: ${ENV}
@@ -42,3 +49,9 @@ services:
       POSTGRES_HOST: postgres
     ports:
       - "4000:4000"
+
+  front:
+    container_name: front
+    image: alexey0381/soc-net-front:v1
+    ports:
+      - "3000:3000"
