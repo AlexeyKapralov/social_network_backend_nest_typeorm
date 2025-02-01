@@ -30,7 +30,7 @@ services:
       - max_connections=200
   back:
     container_name: back
-    image: back
+    image: alexey0381/back:v1
     environment:
       POSTGRESQL_CONNECTION_URI: ${POSTGRESQL_CONNECTION_URI}
       ENV: ${ENV}
