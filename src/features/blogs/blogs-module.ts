@@ -31,6 +31,7 @@ import { BloggerService } from './blogs/application/blogger-service';
 import { GetBlogsForUserQuery } from './blogs/infrastructure/queries/get-blogs-for-user-query';
 import { BlogBlacklist } from './blogs/domain/blog-blacklist-entity';
 import { GetBlogsForAdminQuery } from './blogs/infrastructure/queries/get-blogs-for-admin-query';
+import { S3StorageAdapter } from '../files/files-storage-adapter.service';
 
 @Module({
     imports: [
@@ -50,6 +51,7 @@ import { GetBlogsForAdminQuery } from './blogs/infrastructure/queries/get-blogs-
         CommentsService,
         LikeService,
         BloggerService,
+        S3StorageAdapter,
         BlogsRepository,
         PostsRepository,
         CommentsRepository,

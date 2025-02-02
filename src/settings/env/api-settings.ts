@@ -22,4 +22,12 @@ export class ApiSettings {
     @Matches('\\d+(?: days|m|s)')
     REFRESH_TOKEN_EXPIRATION_LIVE =
         this.environmentVariable.REFRESH_TOKEN_EXPIRATION_LIVE;
+    @IsString()
+    YANDEX_S3_KEY_ID = this.environmentVariable.YANDEX_S3_KEY_ID;
+    @IsString()
+    YANDEX_S3_SECRET_KEY = this.environmentVariable.YANDEX_S3_SECRET_KEY;
+    @IsString()
+    YANDEX_S3_ENDPOINT = this.environmentVariable.YANDEX_S3_ENDPOINT;
+    @IsString()
+    YANDEX_S3_BUCKET_NAME = this.environmentVariable.YANDEX_S3_BUCKET_NAME;
 }

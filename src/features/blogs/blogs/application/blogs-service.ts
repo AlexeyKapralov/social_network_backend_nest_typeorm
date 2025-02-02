@@ -162,12 +162,14 @@ export class BlogsService {
         userId: string,
     ): Promise<InterlayerNotice> {
         const notice = new InterlayerNotice();
-        const blog = await this.blogsRepository.findBlogWithUser(blogId);
+        const blog = await this.blogsRepository.findBlogWithoutUser(blogId);
         if (!blog) {
             notice.addError('blog was not found');
+            return notice;
         }
         if (blog.user?.id) {
             notice.addError('blog already bind with user');
+            return notice;
         }
         const user = await this.usersQueryRepository.findUserById(userId);
         if (!user) {
@@ -182,6 +184,7 @@ export class BlogsService {
         );
         if (!result) {
             notice.addError('blog was not bind with user');
+            return notice;
         }
 
         return notice;

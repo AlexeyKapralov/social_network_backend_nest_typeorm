@@ -9,13 +9,17 @@ import {
     HttpStatus,
     NotFoundException,
     Param,
+    ParseFilePipeBuilder,
     ParseUUIDPipe,
     Post,
     Put,
     Query,
     Req,
+    Res,
     UnauthorizedException,
+    UploadedFile,
     UseGuards,
+    UseInterceptors,
 } from '@nestjs/common';
 import { BlogPostInputDto } from './dto/input/blog-post-input.dto';
 import { QueryDto, QueryDtoWithName } from '../../../../common/dto/query-dto';
@@ -36,6 +40,7 @@ import { BloggerService } from '../application/blogger-service';
 import { GetBlogsForUserPayload } from '../infrastructure/queries/get-blogs-for-user-query';
 import { ValidateJwtGuard } from '../../../auth/auth/guards/validate-jwt-guard';
 import { JwtAuthGuard } from '../../../auth/auth/guards/jwt-auth-guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('blogger/blogs')
 export class BloggerController {
@@ -270,5 +275,59 @@ export class BloggerController {
                 }
             }
         }
+    }
+
+    @UseGuards(ValidateJwtGuard)
+    @Post(':blogId/images/wallpaper')
+    @HttpCode(HttpStatus.CREATED)
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadWallpaperForBlog(
+        @Req() req: any,
+        @Res({ passthrough: true })
+        @UploadedFile(
+            new ParseFilePipeBuilder()
+                .addFileTypeValidator({
+                    fileType: /jpeg|png/,
+                })
+                .addMaxSizeValidator({
+                    //todo изменить на 100 для тестов
+                    maxSize: 500 * 1024 * 1024,
+                })
+                .build({
+                    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+                }),
+        )
+        photo: Express.Multer.File,
+        @Param('blogId') blogId: string,
+    ) {
+        console.log('req.user', req.user);
+        const accessTokenPayload: AccessTokenPayloadDto = req.user;
+        if (!accessTokenPayload?.userId) {
+            throw new UnauthorizedException();
+        }
+
+        const uploadPhotoInterlayer =
+            await this.bloggerService.uploadWallpaperForBlog(
+                blogId,
+                accessTokenPayload.userId,
+                photo,
+            );
+
+        console.log('uploadPhotoInterlayer', uploadPhotoInterlayer);
+        if (uploadPhotoInterlayer.hasError()) {
+            switch (uploadPhotoInterlayer.extensions[0].code) {
+                case InterlayerStatuses.FORBIDDEN: {
+                    throw new ForbiddenException(
+                        uploadPhotoInterlayer.extensions[0].code,
+                    );
+                }
+                case InterlayerStatuses.NOT_FOUND: {
+                    throw new NotFoundException(
+                        uploadPhotoInterlayer.extensions[0].code,
+                    );
+                }
+            }
+        }
+        return uploadPhotoInterlayer.data;
     }
 }

@@ -11,12 +11,14 @@ import { PostsRepository } from '../../posts/infrastructure/posts.repository';
 import { PostsViewDto } from '../../posts/api/dto/output/extended-likes-info-view.dto';
 import { LikeStatus } from '../../likes/api/dto/output/likes-view.dto';
 import { blogViewDtoMapper } from '../../../../base/mappers/blog-view-mapper';
+import { S3StorageAdapter } from '../../../files/files-storage-adapter.service';
 
 @Injectable()
 export class BloggerService {
     constructor(
         private readonly blogsRepository: BlogsRepository,
         private readonly postsRepository: PostsRepository,
+        private readonly s3StorageAdapter: S3StorageAdapter,
     ) {}
 
     async createBlog(
@@ -277,6 +279,48 @@ export class BloggerService {
         const isDeletedPost = await this.postsRepository.deletePost(postId);
         if (!isDeletedPost) {
             notice.addError('post was not deleted');
+            return notice;
+        }
+        return notice;
+    }
+
+    async uploadWallpaperForBlog(
+        blogId: string,
+        userId: string,
+        file: Express.Multer.File,
+    ): Promise<InterlayerNotice> {
+        const notice = new InterlayerNotice();
+
+        const blog = await this.blogsRepository.findBlogWithUser(blogId);
+
+        console.log('blog', blog);
+        if (!blog) {
+            notice.addError(
+                '',
+                'blog was not found',
+                InterlayerStatuses.NOT_FOUND,
+            );
+            return notice;
+        }
+
+        if (blog.user.id !== userId) {
+            notice.addError(
+                '',
+                'user is not owner for blog',
+                InterlayerStatuses.FORBIDDEN,
+            );
+            return notice;
+        }
+
+        const isUploadPhotoForBlog = await this.s3StorageAdapter.saveImage(
+            userId,
+            file.originalname,
+            file.mimetype,
+            file.buffer,
+            'wallpapers',
+        );
+        if (!isUploadPhotoForBlog) {
+            notice.addError('wallpaper was not uploaded');
             return notice;
         }
         return notice;

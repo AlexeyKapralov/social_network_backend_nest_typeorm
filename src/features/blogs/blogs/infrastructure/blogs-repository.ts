@@ -28,6 +28,12 @@ export class BlogsRepository {
         });
     }
 
+    async findBlogWithoutUser(blogId: string): Promise<Blog | null> {
+        return this.blogRepo.findOne({
+            where: { id: blogId, deletedDate: null },
+        });
+    }
+
     async createBlog(
         blogInputDto: BlogInputDto,
         userId: string = null,

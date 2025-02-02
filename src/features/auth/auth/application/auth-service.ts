@@ -48,6 +48,7 @@ export class AuthService {
                 'login',
                 InterlayerStatuses.FORBIDDEN,
             );
+            return notice;
         }
 
         const userByEmail = await this.userQueryRepository.findUserByEmail(

@@ -29,10 +29,10 @@
     "пароль1234serveo2:run": "пароль1234"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.740.0",
     "@nestjs/cli": "^10.0.0",
-    "@nestjs/config": "^3.2.3",
-    "@nestjs/typeorm": "^10.0.2",
     "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.0.0",
     "@nestjs/cqrs": "^10.2.7",
     "@nestjs/jwt": "^10.2.0",
@@ -40,6 +40,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^4.1.2",
     "@nestjs/throttler": "^6.0.0",
+    "@nestjs/typeorm": "^10.0.2",
     "@types/passport-http": "^0.3.11",
     "@types/passport-jwt": "^4.0.1",
     "bcrypt": "^5.1.1",
@@ -63,6 +64,7 @@
     "@types/express": "^4.17.17",
     "@types/jest": "^29.5.2",
     "@types/ms": "^0.7.34",
+    "@types/multer": "^1.4.12",
     "@types/node": "^20.3.1",
     "@types/nodemailer": "^6.4.15",
     "@types/supertest": "^6.0.0",

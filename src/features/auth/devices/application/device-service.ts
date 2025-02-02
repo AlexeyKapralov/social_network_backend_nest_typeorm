@@ -34,6 +34,7 @@ export class DeviceService {
             );
             if (!device) {
                 notice.addError('device did not create');
+                return notice;
             }
             notice.addData(device);
             return notice;
@@ -46,6 +47,7 @@ export class DeviceService {
         );
         if (!updatedDevice) {
             notice.addError('device did not update');
+            return notice;
         }
         notice.addData(updatedDevice);
         return notice;
@@ -69,6 +71,7 @@ export class DeviceService {
                 'device',
                 InterlayerStatuses.NOT_FOUND,
             );
+            return notice;
         }
 
         return notice;
