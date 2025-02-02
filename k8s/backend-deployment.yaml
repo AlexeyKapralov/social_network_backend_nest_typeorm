@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend-pod
+spec:
+  selector:
+    matchLabels:
+      project: backend-pod
+  template:
+    metadata:
+      labels:
+        project: backend-pod
+    spec:
+      containers:
+        - name: backend-pod
+          image: alexey0381/back:v1
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "150m"
+            limits:
+              memory: "150Mi"
+              cpu: "250m"
+          ports:
+            - containerPort: 4000
+          env:
+            - name: POSTGRESQL_CONNECTION_URI
+              value: "postgresql://social_network_owner:NGm8QKUXYx4t@ep-gentle-pond-a20gqorv.eu-central-1.aws.neon.tech/social_network?sslmode=require"
+            - name: ENV
+              value: "DEVELOPMENT"
+            - name: PORT
+              value: "4000"
+            - name: SECRET
+              value: "qazwer10923487"
+            - name: ACCESS_TOKEN_EXPIRATION_LIVE
+              value: "10m"
+            - name: REFRESH_TOKEN_EXPIRATION_LIVE
+              value: "20m"
+            - name: USER_EMAIL_LOGIN
+              value: "alewka24@gmail.com"
+            - name: USER_EMAIL_PASSWORD
+              value: "lvubfeiwltzfvkvi"
+            - name: ADMIN_USERNAME
+              value: "admin"
+            - name: ADMIN_PASSWORD
+              value: "qwerty"
+            - name: POSTGRESQL_TEST_DB_NAME
+              value: "5432"
+            - name: POSTGRES_DB_NAME
+              value: "neondb"
+            - name: POSTGRES_USER
+              value: "neondb_owner"
+            - name: POSTGRES_PASSWORD
+              value: "P6lwzv8ytaHM"
+            - name: POSTGRES_HOST
+              value: "ep-rough-base-a58cg7jp-pooler.us-east-2.aws.neon.tech"

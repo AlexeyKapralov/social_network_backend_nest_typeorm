@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  labels:
+    app: frontend-pod
+spec:
+  selector:
+    matchLabels:
+      project: frontend-pod
+  template:
+    metadata:
+      labels:
+        project: frontend-pod
+    spec:
+      containers:
+        - name: frontend-pod
+          image: alexey0381/soc-net-front:v1
+          ports:
+            - containerPort: 3000
