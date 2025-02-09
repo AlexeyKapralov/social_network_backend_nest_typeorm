@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app-module';
+import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from './settings/apply-app-settings';
 import { ConfigService } from '@nestjs/config';

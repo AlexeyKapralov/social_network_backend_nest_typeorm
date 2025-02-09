@@ -31,12 +31,13 @@ import { BloggerService } from './blogs/application/blogger-service';
 import { GetBlogsForUserQuery } from './blogs/infrastructure/queries/get-blogs-for-user-query';
 import { BlogBlacklist } from './blogs/domain/blog-blacklist-entity';
 import { GetBlogsForAdminQuery } from './blogs/infrastructure/queries/get-blogs-for-admin-query';
-import { S3StorageAdapter } from '../files/files-storage-adapter.service';
+import { S3StorageModule } from '../files/s3-storage.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([Blog, Post, Like, Comment, BlogBlacklist]),
         CqrsModule,
+        S3StorageModule,
     ],
     controllers: [
         BlogsSaController,
@@ -51,7 +52,6 @@ import { S3StorageAdapter } from '../files/files-storage-adapter.service';
         CommentsService,
         LikeService,
         BloggerService,
-        S3StorageAdapter,
         BlogsRepository,
         PostsRepository,
         CommentsRepository,

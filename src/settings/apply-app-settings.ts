@@ -1,6 +1,6 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { useContainer } from 'class-validator';
-import { AppModule } from '../app-module';
+import { AppModule } from '../app.module';
 import cookieParser from 'cookie-parser';
 import {
     BadRequestException,

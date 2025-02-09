@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../../src/app-module';
+import { AppModule } from '../../src/app.module';
 import { aDescribe } from '../utils/aDescribe';
 import { skipSettings } from '../utils/skip-settings';
 import { NestExpressApplication } from '@nestjs/platform-express';

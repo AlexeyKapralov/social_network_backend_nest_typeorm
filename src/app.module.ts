@@ -23,6 +23,8 @@ import { GameQuestion } from './features/quiz/domain/game-question.entity';
 import { Player } from './features/quiz/domain/player.entity';
 import { Question } from './features/quiz/domain/question.entity';
 import { BlogBlacklist } from './features/blogs/blogs/domain/blog-blacklist-entity';
+import { S3StorageModule } from './features/files/s3-storage.module';
+import { File } from './features/files/domain/s3-storage.entity';
 
 @Global()
 @Module({
@@ -62,6 +64,7 @@ import { BlogBlacklist } from './features/blogs/blogs/domain/blog-blacklist-enti
                     Player,
                     Question,
                     BlogBlacklist,
+                    File,
                 ];
 
                 const dbPassword = databaseSettings.POSTGRES_PASSWORD;
@@ -88,6 +91,7 @@ import { BlogBlacklist } from './features/blogs/blogs/domain/blog-blacklist-enti
         BlogsModule,
         PassportModule,
         QuizModule,
+        S3StorageModule,
         TestingModule.register(process.env.ENV),
         ConfigModule.forRoot({
             isGlobal: true,

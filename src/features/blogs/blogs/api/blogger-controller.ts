@@ -1,5 +1,6 @@
 import {
     BadGatewayException,
+    BadRequestException,
     Body,
     Controller,
     Delete,
@@ -290,25 +291,156 @@ export class BloggerController {
                     fileType: /jpeg|png/,
                 })
                 .addMaxSizeValidator({
-                    //todo изменить на 100 для тестов
-                    maxSize: 500 * 1024 * 1024,
+                    maxSize: 100 * 1024, // 100 КБайт
                 })
                 .build({
-                    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+                    errorHttpStatusCode: HttpStatus.BAD_REQUEST,
                 }),
         )
         photo: Express.Multer.File,
         @Param('blogId') blogId: string,
     ) {
-        console.log('req.user', req.user);
+        const validateInterlayer = await this.bloggerService.validateImageSize(
+            photo.buffer,
+            1028,
+            312,
+        );
+        if (validateInterlayer.hasError()) {
+            throw new BadRequestException();
+        }
+
         const accessTokenPayload: AccessTokenPayloadDto = req.user;
         if (!accessTokenPayload?.userId) {
-            throw new UnauthorizedException();
+            throw new BadRequestException();
         }
 
         const uploadPhotoInterlayer =
             await this.bloggerService.uploadWallpaperForBlog(
                 blogId,
+                accessTokenPayload.userId,
+                photo,
+            );
+
+        console.log('uploadPhotoInterlayer', uploadPhotoInterlayer);
+        if (uploadPhotoInterlayer.hasError()) {
+            switch (uploadPhotoInterlayer.extensions[0].code) {
+                case InterlayerStatuses.FORBIDDEN: {
+                    throw new ForbiddenException(
+                        uploadPhotoInterlayer.extensions[0].code,
+                    );
+                }
+                case InterlayerStatuses.NOT_FOUND: {
+                    throw new NotFoundException(
+                        uploadPhotoInterlayer.extensions[0].code,
+                    );
+                }
+            }
+        }
+        return uploadPhotoInterlayer.data;
+    }
+
+    @UseGuards(ValidateJwtGuard)
+    @Post(':blogId/images/main')
+    @HttpCode(HttpStatus.CREATED)
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadMainForBlog(
+        @Req() req: any,
+        @Res({ passthrough: true })
+        @UploadedFile(
+            new ParseFilePipeBuilder()
+                .addFileTypeValidator({
+                    fileType: /jpeg|png/,
+                })
+                .addMaxSizeValidator({
+                    maxSize: 100 * 1024, // 100 КБайт
+                })
+                .build({
+                    errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+                }),
+        )
+        photo: Express.Multer.File,
+        @Param('blogId') blogId: string,
+    ) {
+        const validateInterlayer = await this.bloggerService.validateImageSize(
+            photo.buffer,
+            156,
+            156,
+        );
+        if (validateInterlayer.hasError()) {
+            throw new BadRequestException();
+        }
+
+        const accessTokenPayload: AccessTokenPayloadDto = req.user;
+        if (!accessTokenPayload?.userId) {
+            throw new BadRequestException();
+        }
+
+        const uploadPhotoInterlayer =
+            await this.bloggerService.uploadMainForBlog(
+                blogId,
+                accessTokenPayload.userId,
+                photo,
+            );
+
+        console.log('uploadPhotoInterlayer', uploadPhotoInterlayer);
+        if (uploadPhotoInterlayer.hasError()) {
+            switch (uploadPhotoInterlayer.extensions[0].code) {
+                case InterlayerStatuses.FORBIDDEN: {
+                    throw new ForbiddenException(
+                        uploadPhotoInterlayer.extensions[0].code,
+                    );
+                }
+                case InterlayerStatuses.NOT_FOUND: {
+                    throw new NotFoundException(
+                        uploadPhotoInterlayer.extensions[0].code,
+                    );
+                }
+            }
+        }
+        return uploadPhotoInterlayer.data;
+    }
+
+    @UseGuards(ValidateJwtGuard)
+    @Post(':blogId/posts/:postId/images/main')
+    @HttpCode(HttpStatus.CREATED)
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadMainForPost(
+        @Req() req: any,
+        @Res({ passthrough: true })
+        @UploadedFile(
+            new ParseFilePipeBuilder()
+                .addFileTypeValidator({
+                    fileType: /jpeg|png/,
+                })
+                .addMaxSizeValidator({
+                    maxSize: 100 * 1024, // 100 КБайт
+                })
+                .build({
+                    errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+                }),
+        )
+        photo: Express.Multer.File,
+        @Param('blogId') blogId: string,
+        @Param('postId') postId: string,
+    ) {
+        const validateInterlayer = await this.bloggerService.validateImageSize(
+            photo.buffer,
+            940,
+            432,
+        );
+        if (validateInterlayer.hasError()) {
+            throw new BadRequestException();
+        }
+
+        const accessTokenPayload: AccessTokenPayloadDto = req.user;
+        if (!accessTokenPayload?.userId) {
+            throw new BadRequestException();
+        }
+
+        const uploadPhotoInterlayer =
+            await this.bloggerService.uploadMainForPost(
+                blogId,
+                postId,
                 accessTokenPayload.userId,
                 photo,
             );

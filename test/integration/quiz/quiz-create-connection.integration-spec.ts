@@ -3,7 +3,7 @@ import { QuizService } from '../../../src/features/quiz/application/quiz.service
 import { InterlayerStatuses } from '../../../src/base/models/interlayer';
 import { v4 as uuid } from 'uuid';
 import { GameStatuses } from '../../../src/features/quiz/api/dto/output/game-pair-view.dto';
-import { AppModule } from '../../../src/app-module';
+import { AppModule } from '../../../src/app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { applyAppSettings } from '../../../src/settings/apply-app-settings';
 import { DataSource } from 'typeorm';

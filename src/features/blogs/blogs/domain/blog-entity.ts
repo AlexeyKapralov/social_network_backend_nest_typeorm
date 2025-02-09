@@ -11,6 +11,7 @@ import {
 import { BlogInputDto } from '../api/dto/input/blog-input-dto';
 import { User } from '../../../users/domain/user-entity';
 import { BlogBlacklist } from './blog-blacklist-entity';
+import { File } from '../../../files/domain/s3-storage.entity';
 
 @Entity()
 export class Blog extends BaseEntity {
@@ -45,6 +46,9 @@ export class Blog extends BaseEntity {
     @OneToMany(() => BlogBlacklist, (blogBlacklist) => blogBlacklist.blog)
     @JoinColumn({ name: 'blogBlacklistId' })
     blogBlacklist: BlogBlacklist[];
+
+    @OneToMany(() => File, (file) => file.blog)
+    files: File[];
 
     static async createBlog(blogInputDto: BlogInputDto): Promise<Blog> {
         const blog = new Blog();

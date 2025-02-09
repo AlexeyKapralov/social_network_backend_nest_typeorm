@@ -16,6 +16,7 @@ export class TestingService {
                     SELECT tablename
                     FROM pg_tables
                     WHERE schemaname = 'public'
+                        AND tablename != 'migrations'
                 LOOP
                     EXECUTE 'TRUNCATE TABLE ' || quote_ident(table_name) || ' CASCADE;';
                 END LOOP;

@@ -11,6 +11,7 @@ import {
 import { Blog } from '../../blogs/domain/blog-entity';
 import { BlogPostInputDto } from '../../blogs/api/dto/input/blog-post-input.dto';
 import { Like } from '../../likes/domain/likes.entity';
+import { File } from '../../../files/domain/s3-storage.entity';
 
 @Entity()
 export class Post extends BaseEntity {
@@ -44,6 +45,9 @@ export class Post extends BaseEntity {
 
     @OneToMany(() => Like, (like) => like.post)
     like: Like[];
+
+    @OneToMany(() => File, (file) => file.post)
+    files: File[];
 
     static async createPost(postInputDto: BlogPostInputDto, blog: Blog) {
         const post = new Post();
