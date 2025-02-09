@@ -6,6 +6,9 @@ import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
 import { PostsViewDto } from '../../api/dto/output/extended-likes-info-view.dto';
 import { BlogsQueryRepository } from '../../../blogs/infrastructure/blogs-query-repository';
+import { File } from '../../../../files/domain/s3-storage.entity';
+import { S3StorageService } from '../../../../files/application/s3-storage.service';
+import { PhotoSizeViewDto } from '../../../blogs/api/dto/output/post-images-view.dto';
 
 export class GetOnePostForBlogPayload implements IQuery {
     constructor(
@@ -23,6 +26,7 @@ export class GetOnePostForBlogQuery
         @InjectRepository(Post) private readonly postRepo: Repository<Post>,
         @InjectDataSource() private readonly dataSource: DataSource,
         private readonly blogQueryRepository: BlogsQueryRepository,
+        private readonly s3StorageService: S3StorageService,
     ) {}
 
     async execute(
@@ -140,7 +144,7 @@ export class GetOnePostForBlogQuery
             .setParameters(userLike.getParameters())
             .getRawOne();
 
-        let post: PostsViewDto;
+        let post: Omit<PostsViewDto, 'images'>;
         let likes = [];
 
         if (postWithNewestLikes.newestLikes) {
@@ -174,7 +178,43 @@ export class GetOnePostForBlogQuery
             },
         };
 
-        return post;
+        const files: Pick<File, 'fileKey' | 'fileSize' | 'height' | 'width'>[] =
+            await this.dataSource.query(
+                `
+                SELECT f."fileKey", f."fileSize", f.height, f.width 
+                FROM public.file f
+                WHERE f."postId" = $1
+            `,
+                [post.id],
+            );
+
+        for (const key of files) {
+            key.fileKey = await this.s3StorageService.getPreSignedUrl(
+                key.fileKey,
+            );
+        }
+
+        const imgs: PhotoSizeViewDto[] = [];
+        files.forEach((file: File) => {
+            const imgNew: PhotoSizeViewDto = {
+                fileSize: Number(file.fileSize),
+                height: Number(file.height),
+                width: Number(file.width),
+                url: file.fileKey,
+            };
+            imgs.push(imgNew);
+        });
+
+        const newPost: PostsViewDto = {
+            ...post,
+            ...post.extendedLikesInfo,
+            ...post.extendedLikesInfo.newestLikes,
+            images: {
+                main: imgs,
+            },
+        };
+
+        return newPost;
     }
 }
 

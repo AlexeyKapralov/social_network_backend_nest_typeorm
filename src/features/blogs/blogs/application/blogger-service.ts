@@ -16,6 +16,7 @@ import sharp from 'sharp';
 import { BlogImagesViewDto } from '../api/dto/output/blog-images-view.dto';
 import { FileTypeEnum } from '../../../files/api/enum/file-type.enum';
 import { PostImagesViewDto } from '../api/dto/output/post-images-view.dto';
+import { File } from '../../../files/domain/s3-storage.entity';
 
 @Injectable()
 export class BloggerService {
@@ -38,7 +39,12 @@ export class BloggerService {
             notice.addError('blog is not created');
             return notice;
         }
-        notice.addData(blogViewDtoMapper(blog));
+
+        const files: Pick<
+            File,
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+        >[] = [];
+        notice.addData(blogViewDtoMapper(blog, files));
         return notice;
     }
 
@@ -160,6 +166,9 @@ export class BloggerService {
                 dislikesCount: createdPost.dislikesCount,
                 myStatus: LikeStatus.None,
                 newestLikes: [],
+            },
+            images: {
+                main: [],
             },
         };
 

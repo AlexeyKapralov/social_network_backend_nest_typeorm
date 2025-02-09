@@ -5,6 +5,9 @@ import { Post } from '../../domain/posts.entity';
 import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
 import { PostsViewDto } from '../../api/dto/output/extended-likes-info-view.dto';
+import { File } from '../../../../files/domain/s3-storage.entity';
+import { S3StorageService } from '../../../../files/application/s3-storage.service';
+import { PhotoSizeViewDto } from '../../../blogs/api/dto/output/post-images-view.dto';
 
 export class GetOnePostPayload implements IQuery {
     constructor(
@@ -20,6 +23,7 @@ export class GetOnePostQuery
     constructor(
         @InjectRepository(Post) private readonly postRepo: Repository<Post>,
         @InjectDataSource() private readonly dataSource: DataSource,
+        private readonly s3StorageService: S3StorageService,
     ) {}
 
     async execute(
@@ -140,7 +144,7 @@ export class GetOnePostQuery
             });
         }
 
-        const fullPost: PostsViewDto = {
+        const fullPost: Omit<PostsViewDto, 'images'> = {
             id: postWithNewestLikes.id,
             blogId: postWithNewestLikes.blogId,
             blogName: postWithNewestLikes.blogName,
@@ -159,7 +163,43 @@ export class GetOnePostQuery
             },
         };
 
-        return fullPost;
+        const files: Pick<File, 'fileKey' | 'fileSize' | 'height' | 'width'>[] =
+            await this.dataSource.query(
+                `
+                SELECT f."fileKey", f."fileSize", f.height, f.width 
+                FROM public.file f
+                WHERE f."postId" = $1
+            `,
+                [queryPayload.postId],
+            );
+
+        for (const key of files) {
+            key.fileKey = await this.s3StorageService.getPreSignedUrl(
+                key.fileKey,
+            );
+        }
+
+        const imgs: PhotoSizeViewDto[] = [];
+        files.forEach((file: File) => {
+            const imgNew: PhotoSizeViewDto = {
+                fileSize: Number(file.fileSize),
+                height: Number(file.height),
+                width: Number(file.width),
+                url: file.fileKey,
+            };
+            imgs.push(imgNew);
+        });
+
+        const newPost: PostsViewDto = {
+            ...fullPost,
+            ...fullPost.extendedLikesInfo,
+            ...fullPost.extendedLikesInfo.newestLikes,
+            images: {
+                main: imgs,
+            },
+        };
+
+        return newPost;
     }
 }
 

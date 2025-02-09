@@ -8,6 +8,9 @@ import { Like } from '../../../likes/domain/likes.entity';
 import { LikeStatus } from '../../../likes/api/dto/output/likes-view.dto';
 import { PostsViewDto } from '../../api/dto/output/extended-likes-info-view.dto';
 import { BlogsQueryRepository } from '../../../blogs/infrastructure/blogs-query-repository';
+import { File } from '../../../../files/domain/s3-storage.entity';
+import { S3StorageService } from '../../../../files/application/s3-storage.service';
+import { PhotoSizeViewDto } from '../../../blogs/api/dto/output/post-images-view.dto';
 
 export class GetPostsForBlogPayload implements IQuery {
     constructor(
@@ -25,6 +28,7 @@ export class GetPostsForBlogQuery
         @InjectRepository(Post) private readonly postRepo: Repository<Post>,
         @InjectDataSource() private readonly dataSource: DataSource,
         private readonly blogQueryRepository: BlogsQueryRepository,
+        private readonly s3StorageService: S3StorageService,
     ) {}
 
     async execute(
@@ -165,7 +169,7 @@ export class GetPostsForBlogQuery
             .setParameters(postsUnique.getParameters())
             .getRawMany();
 
-        const posts: PostsViewDto[] = [];
+        const postsWithoutImages: Omit<PostsViewDto, 'images'>[] = [];
         postsSourceWithNewestLikes.forEach((post) => {
             let likes = [];
 
@@ -181,7 +185,7 @@ export class GetPostsForBlogQuery
                 });
             }
 
-            const fullPost: PostsViewDto = {
+            const fullPost: Omit<PostsViewDto, 'images'> = {
                 id: post.id,
                 blogId: post.blogId,
                 blogName: post.blogName,
@@ -199,7 +203,51 @@ export class GetPostsForBlogQuery
                     newestLikes: likes,
                 },
             };
-            posts.push(fullPost);
+            postsWithoutImages.push(fullPost);
+        });
+
+        const postsForFilter = postsWithoutImages.map((i) => {
+            return i.id;
+        });
+
+        const files: Pick<File, 'fileKey' | 'fileSize' | 'height' | 'width'>[] =
+            await this.dataSource.query(`
+            SELECT f."fileKey", f."fileSize", f.height, f.width 
+            FROM public.file f
+            WHERE f."postId" IN (${postsForFilter})
+        `);
+
+        for (const key of files) {
+            key.fileKey = await this.s3StorageService.getPreSignedUrl(
+                key.fileKey,
+            );
+        }
+
+        const posts: PostsViewDto[] = [];
+        postsWithoutImages.forEach((post) => {
+            const imgs: PhotoSizeViewDto[] = [];
+
+            files.forEach((file: File) => {
+                if (post.id === file.postId) {
+                    const imgNew: PhotoSizeViewDto = {
+                        fileSize: Number(file.fileSize),
+                        height: Number(file.height),
+                        width: Number(file.width),
+                        url: file.fileKey,
+                    };
+                    imgs.push(imgNew);
+                }
+            });
+
+            const newPost: PostsViewDto = {
+                ...post,
+                ...post.extendedLikesInfo,
+                ...post.extendedLikesInfo.newestLikes,
+                images: {
+                    main: imgs,
+                },
+            };
+            posts.push(newPost);
         });
 
         const postsWithPaginate: PaginatorDto<PostsViewDto> = {

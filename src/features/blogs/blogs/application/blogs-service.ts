@@ -97,6 +97,9 @@ export class BlogsService {
                 myStatus: LikeStatus.None,
                 newestLikes: [],
             },
+            images: {
+                main: [],
+            },
         };
 
         notice.addData(mappedCreatedPost);

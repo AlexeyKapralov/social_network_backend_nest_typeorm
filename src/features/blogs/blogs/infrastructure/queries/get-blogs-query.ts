@@ -1,8 +1,8 @@
 import { IQuery, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { BlogViewDto } from '../../api/dto/output/blog-view-dto';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { Blog } from '../../domain/blog-entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { InterlayerNotice } from '../../../../../base/models/interlayer';
 import { PaginatorDto } from '../../../../../common/dto/paginator-dto';
 import {
@@ -11,6 +11,8 @@ import {
 } from '../../../../../common/dto/query-dto';
 import { BlogBlacklist } from '../../domain/blog-blacklist-entity';
 import { blogViewDtoMapper } from '../../../../../base/mappers/blog-view-mapper';
+import { File } from '../../../../files/domain/s3-storage.entity';
+import { S3StorageService } from '../../../../files/application/s3-storage.service';
 
 export class GetBlogsPayload implements IQuery {
     constructor(public query: QueryDtoForBlogs) {}
@@ -26,6 +28,8 @@ export class GetBlogsQuery
 {
     constructor(
         @InjectRepository(Blog) private readonly blogRepo: Repository<Blog>,
+        @InjectDataSource() private readonly dataSource: DataSource,
+        private readonly s3StorageService: S3StorageService,
     ) {}
 
     async execute(
@@ -93,12 +97,31 @@ export class GetBlogsQuery
             )
             .getMany();
 
+        const blogsForFilter = blogs.map((blog) => {
+            return blog.id;
+        });
+
+        const files: Pick<
+            File,
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+        >[] = await this.dataSource.query(`
+            SELECT f."fileKey", f."fileSize", f.height, f.width 
+            FROM public.file f
+            WHERE f."blogId" IN (${blogsForFilter})
+        `);
+
+        for (const key of files) {
+            key.fileKey = await this.s3StorageService.getPreSignedUrl(
+                key.fileKey,
+            );
+        }
+
         const blogsPaginator: PaginatorDto<BlogViewDto> = {
             pagesCount: Math.ceil(countBlogs / queryPayload.query.pageSize),
             page: queryPayload.query.pageNumber,
             pageSize: queryPayload.query.pageSize,
             totalCount: countBlogs,
-            items: blogs.map((c) => blogViewDtoMapper(c)),
+            items: blogs.map((c) => blogViewDtoMapper(c, files)),
         };
 
         notice.addData(blogsPaginator);

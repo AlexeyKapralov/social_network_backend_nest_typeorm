@@ -2,6 +2,7 @@ import {
     LikeDetailsViewDto,
     LikeStatus,
 } from '../../../../likes/api/dto/output/likes-view.dto';
+import { PostImagesViewDto } from '../../../../blogs/api/dto/output/post-images-view.dto';
 
 export type PostsViewDto = {
     id: string;
@@ -12,6 +13,7 @@ export type PostsViewDto = {
     blogName: string;
     createdAt: string;
     extendedLikesInfo: ExtendedLikesInfoViewDto;
+    images: PostImagesViewDto;
 };
 
 export type ExtendedLikesInfoViewDto = {
