@@ -337,7 +337,7 @@ export class BloggerService {
             notice.addError(
                 'file is already exists',
                 '',
-                InterlayerStatuses.FORBIDDEN,
+                InterlayerStatuses.NOT_FOUND,
             );
             return notice;
         }
@@ -527,7 +527,7 @@ export class BloggerService {
             .resize({
                 width: 300,
                 height: 180,
-                fit: 'inside',
+                fit: 'fill',
             })
             .toBuffer();
 
@@ -535,7 +535,7 @@ export class BloggerService {
             .resize({
                 width: 149,
                 height: 96,
-                fit: 'inside',
+                fit: 'fill',
             })
             .toBuffer();
 

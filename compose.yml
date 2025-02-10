@@ -28,30 +28,30 @@ services:
       - postgres
       - -c
       - max_connections=200
-  back:
-    container_name: back
-    image: alexey0381/back:v1
-    environment:
-      POSTGRESQL_CONNECTION_URI: ${POSTGRESQL_CONNECTION_URI}
-      ENV: ${ENV}
-      PORT: ${PORT}
-      SECRET: ${SECRET}
-      ACCESS_TOKEN_EXPIRATION_LIVE: ${ACCESS_TOKEN_EXPIRATION_LIVE}
-      REFRESH_TOKEN_EXPIRATION_LIVE: ${REFRESH_TOKEN_EXPIRATION_LIVE}
-      USER_EMAIL_LOGIN: ${USER_EMAIL_LOGIN}
-      USER_EMAIL_PASSWORD: ${USER_EMAIL_PASSWORD}
-      ADMIN_USERNAME: ${ADMIN_USERNAME}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      POSTGRESQL_TEST_DB_NAME: ${POSTGRESQL_TEST_DB_NAME}
-      POSTGRES_DB_NAME: ${POSTGRES_DB_NAME}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: postgres
-    ports:
-      - "4000:4000"
-
-  front:
-    container_name: front
-    image: alexey0381/soc-net-front:v1
-    ports:
-      - "3000:3000"
+#  back:
+#    container_name: back
+#    image: alexey0381/back:v1
+#    environment:
+#      POSTGRESQL_CONNECTION_URI: ${POSTGRESQL_CONNECTION_URI}
+#      ENV: ${ENV}
+#      PORT: ${PORT}
+#      SECRET: ${SECRET}
+#      ACCESS_TOKEN_EXPIRATION_LIVE: ${ACCESS_TOKEN_EXPIRATION_LIVE}
+#      REFRESH_TOKEN_EXPIRATION_LIVE: ${REFRESH_TOKEN_EXPIRATION_LIVE}
+#      USER_EMAIL_LOGIN: ${USER_EMAIL_LOGIN}
+#      USER_EMAIL_PASSWORD: ${USER_EMAIL_PASSWORD}
+#      ADMIN_USERNAME: ${ADMIN_USERNAME}
+#      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+#      POSTGRESQL_TEST_DB_NAME: ${POSTGRESQL_TEST_DB_NAME}
+#      POSTGRES_DB_NAME: ${POSTGRES_DB_NAME}
+#      POSTGRES_USER: ${POSTGRES_USER}
+#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+#      POSTGRES_HOST: postgres
+#    ports:
+#      - "4000:4000"
+#
+#  front:
+#    container_name: front
+#    image: alexey0381/soc-net-front:v1
+#    ports:
+#      - "3000:3000"

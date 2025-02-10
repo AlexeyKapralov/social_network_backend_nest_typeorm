@@ -190,9 +190,9 @@ export class GetPostsQuery
             postsWithoutImages.push(fullPost);
         });
 
-        const postsForFilter = postsWithoutImages.map((i) => {
-            return i.id;
-        });
+        const postsForFilter = postsWithoutImages
+            .map((post) => `'${post.id}'`)
+            .join(',');
 
         const files: Pick<File, 'fileKey' | 'fileSize' | 'height' | 'width'>[] =
             await this.dataSource.query(`

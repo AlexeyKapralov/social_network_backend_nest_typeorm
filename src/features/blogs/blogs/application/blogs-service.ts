@@ -15,6 +15,7 @@ import { UsersQueryRepository } from '../../../users/infrastructure/users-query-
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { BlogBlacklist } from '../domain/blog-blacklist-entity';
+import { File } from '../../../files/domain/s3-storage.entity';
 
 @Injectable()
 export class BlogsService {
@@ -34,7 +35,13 @@ export class BlogsService {
             notice.addError('blog is bot created');
             return notice;
         }
-        notice.addData(blogViewDtoMapper(blog));
+
+        const files: Pick<
+            File,
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+        >[] = [];
+
+        notice.addData(blogViewDtoMapper(blog, files));
         return notice;
     }
 

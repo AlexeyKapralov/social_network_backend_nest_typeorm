@@ -97,15 +97,13 @@ export class GetBlogsQuery
             )
             .getMany();
 
-        const blogsForFilter = blogs.map((blog) => {
-            return blog.id;
-        });
+        const blogsForFilter = blogs.map((blog) => `'${blog.id}'`).join(',');
 
         const files: Pick<
             File,
             'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
         >[] = await this.dataSource.query(`
-            SELECT f."fileKey", f."fileSize", f.height, f.width 
+            SELECT f."fileKey", f."fileSize", f.height, f.width, f."typeFile" 
             FROM public.file f
             WHERE f."blogId" IN (${blogsForFilter})
         `);

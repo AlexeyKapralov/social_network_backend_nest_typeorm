@@ -12,7 +12,7 @@ export const blogViewDtoMapper = (
     >[],
 ): BlogViewDto => {
     const mainArr: PhotoSizeViewDto[] = [];
-    let wallpaper: PhotoSizeViewDto;
+    let wallpaper: PhotoSizeViewDto = null;
 
     if (!files.length) {
         return {
@@ -48,6 +48,9 @@ export const blogViewDtoMapper = (
             mainArr.push(mainMapped);
         }
     });
+
+    console.log('files', files);
+    console.log('wallpaper', wallpaper);
 
     return {
         id: blog.id,

@@ -181,7 +181,7 @@ export class GetOnePostForBlogQuery
         const files: Pick<File, 'fileKey' | 'fileSize' | 'height' | 'width'>[] =
             await this.dataSource.query(
                 `
-                SELECT f."fileKey", f."fileSize", f.height, f.width 
+                SELECT f."fileKey", f."fileSize", f.height, f.width
                 FROM public.file f
                 WHERE f."postId" = $1
             `,

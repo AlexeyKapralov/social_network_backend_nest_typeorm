@@ -132,7 +132,7 @@ export class S3StorageService {
         const command = new GetObjectCommand(bucketParams);
         try {
             const url = await getSignedUrl(this.s3Client, command, {
-                expiresIn: 20, //20 секунд жить будет
+                expiresIn: 360, //360 секунд жить будет
             });
 
             console.log('url is receiving', url);
@@ -191,6 +191,7 @@ export class S3StorageService {
 
         const filesMapped: BlogImagesViewDto = {} as BlogImagesViewDto;
         filesMapped.main = [];
+        filesMapped.wallpaper = null;
         for (const i of files) {
             const url = await this.getPreSignedUrl(i.fileKey);
 
