@@ -36,6 +36,9 @@ export class File extends BaseEntity {
     @Column()
     fileKey: string;
 
+    @Column()
+    url: string;
+
     @ManyToOne(() => Blog, (blog) => blog.files)
     @JoinColumn({
         name: 'blogId',

@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     Body,
     Controller,
     ForbiddenException,
@@ -82,6 +83,8 @@ export class QuizController {
                     throw new ForbiddenException();
                 case InterlayerStatuses.NOT_FOUND:
                     throw new NotFoundException();
+                case InterlayerStatuses.BAD_REQUEST:
+                    throw new BadRequestException();
             }
         }
 
@@ -196,6 +199,8 @@ export class QuizController {
                     throw new ForbiddenException();
                 case InterlayerStatuses.NOT_FOUND:
                     throw new NotFoundException();
+                case InterlayerStatuses.BAD_REQUEST:
+                    throw new BadRequestException();
             }
         }
 
@@ -223,6 +228,8 @@ export class QuizController {
                     throw new ForbiddenException();
                 case InterlayerStatuses.NOT_FOUND:
                     throw new NotFoundException();
+                case InterlayerStatuses.BAD_REQUEST:
+                    throw new BadRequestException();
             }
         }
 

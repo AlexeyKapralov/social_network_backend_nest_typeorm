@@ -74,19 +74,22 @@ export class GetBlogsForUserQuery
 
         const blogsForFilter = blogs.map((blog) => `'${blog.id}'`).join(',');
 
-        const files: Pick<
+        let files: Pick<
             File,
-            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
-        >[] = await this.dataSource.query(`
-            SELECT f."fileKey", f."fileSize", f.height, f.width, f."typeFile" 
-            FROM public.file f
-            WHERE f."blogId" IN (${blogsForFilter})
-        `);
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile' | 'blogId'
+        >[] = [];
+        if (blogs.length) {
+            files = await this.dataSource.query(`
+                SELECT f."fileKey", f."fileSize", f.height, f.width, f."typeFile", f."blogId" 
+                FROM public.file f
+                WHERE f."blogId" IN (${blogsForFilter}) AND f."deletedDate" IS NULL
+            `);
 
-        for (const key of files) {
-            key.fileKey = await this.s3StorageService.getPreSignedUrl(
-                key.fileKey,
-            );
+            for (const key of files) {
+                key.fileKey = await this.s3StorageService.getPreSignedUrl(
+                    key.fileKey,
+                );
+            }
         }
 
         const blogsPaginator: PaginatorDto<BlogViewDto> = {

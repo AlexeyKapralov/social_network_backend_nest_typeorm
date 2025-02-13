@@ -38,7 +38,7 @@ export class BlogsService {
 
         const files: Pick<
             File,
-            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile' | 'blogId'
         >[] = [];
 
         notice.addData(blogViewDtoMapper(blog, files));

@@ -34,6 +34,8 @@ export class GetPostsForBlogQuery
     async execute(
         queryPayload: GetPostsForBlogPayload,
     ): Promise<GetPostsResultType> {
+        console.log('queryPayload', queryPayload);
+
         let foundBlog;
         try {
             foundBlog = await this.blogQueryRepository.findBlog(
@@ -48,7 +50,7 @@ export class GetPostsForBlogQuery
         const offset =
             (queryPayload.query.pageNumber - 1) * queryPayload.query.pageSize;
 
-        let countPosts = 0;
+        let countPosts: number;
         countPosts = await this.postRepo
             .createQueryBuilder('p')
             .leftJoinAndSelect('p.blog', 'blog')
@@ -210,11 +212,13 @@ export class GetPostsForBlogQuery
             .map((post) => `'${post.id}'`)
             .join(',');
 
-        const files: Pick<File, 'fileKey' | 'fileSize' | 'height' | 'width'>[] =
-            await this.dataSource.query(`
-            SELECT f."fileKey", f."fileSize", f.height, f.width 
+        const files: Pick<
+            File,
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'postId'
+        >[] = await this.dataSource.query(`
+            SELECT f."fileKey", f."fileSize", f.height, f.width, f."postId" 
             FROM public.file f
-            WHERE f."postId" IN (${postsForFilter})
+            WHERE f."postId" IN (${postsForFilter}) AND f."deletedDate" IS NULL
         `);
 
         for (const key of files) {
@@ -241,8 +245,6 @@ export class GetPostsForBlogQuery
 
             const newPost: PostsViewDto = {
                 ...post,
-                ...post.extendedLikesInfo,
-                ...post.extendedLikesInfo.newestLikes,
                 images: {
                     main: imgs,
                 },
@@ -250,15 +252,13 @@ export class GetPostsForBlogQuery
             posts.push(newPost);
         });
 
-        const postsWithPaginate: PaginatorDto<PostsViewDto> = {
+        return {
             pagesCount: Math.ceil(countPosts / queryPayload.query.pageSize),
             page: queryPayload.query.pageNumber,
             pageSize: queryPayload.query.pageSize,
             totalCount: countPosts,
             items: posts,
         };
-
-        return postsWithPaginate;
     }
 }
 

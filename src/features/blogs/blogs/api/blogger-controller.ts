@@ -108,12 +108,17 @@ export class BloggerController {
             switch (updateBlogInterlayer.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        updateBlogInterlayer.extensions[0].code,
+                        updateBlogInterlayer.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        updateBlogInterlayer.extensions[0].code,
+                        updateBlogInterlayer.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        updateBlogInterlayer.extensions[0].message,
                     );
                 }
             }
@@ -140,12 +145,17 @@ export class BloggerController {
             switch (deleteBlogInterlayer.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        deleteBlogInterlayer.extensions[0].code,
+                        deleteBlogInterlayer.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        deleteBlogInterlayer.extensions[0].code,
+                        deleteBlogInterlayer.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        deleteBlogInterlayer.extensions[0].message,
                     );
                 }
             }
@@ -174,12 +184,17 @@ export class BloggerController {
             switch (createdPostForBlog.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        createdPostForBlog.extensions[0].code,
+                        createdPostForBlog.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        createdPostForBlog.extensions[0].code,
+                        createdPostForBlog.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        createdPostForBlog.extensions[0].message,
                     );
                 }
             }
@@ -233,12 +248,17 @@ export class BloggerController {
             switch (isUpdatedInterLayer.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        isUpdatedInterLayer.extensions[0].code,
+                        isUpdatedInterLayer.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        isUpdatedInterLayer.extensions[0].code,
+                        isUpdatedInterLayer.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        isUpdatedInterLayer.extensions[0].message,
                     );
                 }
             }
@@ -266,12 +286,17 @@ export class BloggerController {
             switch (isDeletedInterLayer.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        isDeletedInterLayer.extensions[0].code,
+                        isDeletedInterLayer.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        isDeletedInterLayer.extensions[0].code,
+                        isDeletedInterLayer.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        isDeletedInterLayer.extensions[0].message,
                     );
                 }
             }
@@ -326,12 +351,17 @@ export class BloggerController {
             switch (uploadPhotoInterlayer.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        uploadPhotoInterlayer.extensions[0].code,
+                        uploadPhotoInterlayer.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        uploadPhotoInterlayer.extensions[0].code,
+                        uploadPhotoInterlayer.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        uploadPhotoInterlayer.extensions[0].message,
                     );
                 }
             }
@@ -387,12 +417,17 @@ export class BloggerController {
             switch (uploadPhotoInterlayer.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        uploadPhotoInterlayer.extensions[0].code,
+                        uploadPhotoInterlayer.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        uploadPhotoInterlayer.extensions[0].code,
+                        uploadPhotoInterlayer.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        uploadPhotoInterlayer.extensions[0].message,
                     );
                 }
             }
@@ -429,6 +464,7 @@ export class BloggerController {
             432,
         );
         if (validateInterlayer.hasError()) {
+            console.log(validateInterlayer.extensions[0].message);
             throw new BadRequestException();
         }
 
@@ -450,12 +486,17 @@ export class BloggerController {
             switch (uploadPhotoInterlayer.extensions[0].code) {
                 case InterlayerStatuses.FORBIDDEN: {
                     throw new ForbiddenException(
-                        uploadPhotoInterlayer.extensions[0].code,
+                        uploadPhotoInterlayer.extensions[0].message,
                     );
                 }
                 case InterlayerStatuses.NOT_FOUND: {
                     throw new NotFoundException(
-                        uploadPhotoInterlayer.extensions[0].code,
+                        uploadPhotoInterlayer.extensions[0].message,
+                    );
+                }
+                case InterlayerStatuses.BAD_REQUEST: {
+                    throw new BadRequestException(
+                        uploadPhotoInterlayer.extensions[0].message,
                     );
                 }
             }

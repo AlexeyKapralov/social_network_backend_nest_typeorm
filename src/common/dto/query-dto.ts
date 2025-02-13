@@ -40,7 +40,7 @@ export class QueryDtoBase {
                 return 'DESC';
         }
     })
-    sortDirection: SortDirection = SortDirection.DESC;
+    sortDirection: SortDirection = SortDirection.ASC;
     @Type(() => Number)
     @IsNumber()
     @Min(1)

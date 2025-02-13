@@ -183,7 +183,7 @@ export class GetOnePostForBlogQuery
                 `
                 SELECT f."fileKey", f."fileSize", f.height, f.width
                 FROM public.file f
-                WHERE f."postId" = $1
+                WHERE f."postId" = $1 AND f."deletedDate" IS NULL
             `,
                 [post.id],
             );
@@ -205,16 +205,12 @@ export class GetOnePostForBlogQuery
             imgs.push(imgNew);
         });
 
-        const newPost: PostsViewDto = {
+        return {
             ...post,
-            ...post.extendedLikesInfo,
-            ...post.extendedLikesInfo.newestLikes,
             images: {
                 main: imgs,
             },
         };
-
-        return newPost;
     }
 }
 

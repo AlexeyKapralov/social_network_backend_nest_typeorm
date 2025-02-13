@@ -101,11 +101,11 @@ export class GetBlogsQuery
 
         const files: Pick<
             File,
-            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile' | 'blogId'
         >[] = await this.dataSource.query(`
-            SELECT f."fileKey", f."fileSize", f.height, f.width, f."typeFile" 
+            SELECT f."fileKey", f."fileSize", f.height, f.width, f."typeFile", f."blogId" 
             FROM public.file f
-            WHERE f."blogId" IN (${blogsForFilter})
+            WHERE f."blogId" IN (${blogsForFilter}) AND f."deletedDate" IS NULL
         `);
 
         for (const key of files) {

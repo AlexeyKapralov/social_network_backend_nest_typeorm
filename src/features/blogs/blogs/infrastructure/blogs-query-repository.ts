@@ -33,12 +33,12 @@ export class BlogsQueryRepository {
 
         const files: Pick<
             File,
-            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile' | 'blogId'
         >[] = await this.dataSource.query(
             `
-            SELECT f."fileKey", f."fileSize", f.height, f.width, f."typeFile" 
+            SELECT f."fileKey", f."fileSize", f.height, f.width, f."typeFile", f."blogId"
             FROM public.file f
-            WHERE f."blogId" = $1
+            WHERE f."blogId" = $1 AND f."deletedDate" IS NULL
         `,
             [blog.id],
         );

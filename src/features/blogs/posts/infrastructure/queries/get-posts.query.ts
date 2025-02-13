@@ -33,7 +33,7 @@ export class GetPostsQuery
         const offset =
             (queryPayload.query.pageNumber - 1) * queryPayload.query.pageSize;
 
-        let countPosts = 0;
+        let countPosts: number;
         countPosts = await this.postRepo
             .createQueryBuilder('p')
             .leftJoinAndSelect('p.blog', 'blog')
@@ -194,11 +194,13 @@ export class GetPostsQuery
             .map((post) => `'${post.id}'`)
             .join(',');
 
-        const files: Pick<File, 'fileKey' | 'fileSize' | 'height' | 'width'>[] =
-            await this.dataSource.query(`
-            SELECT f."fileKey", f."fileSize", f.height, f.width 
+        const files: Pick<
+            File,
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'postId'
+        >[] = await this.dataSource.query(`
+            SELECT f."fileKey", f."fileSize", f.height, f.width, f."postId" 
             FROM public.file f
-            WHERE f."postId" IN (${postsForFilter})
+            WHERE f."postId" IN (${postsForFilter}) AND f."deletedDate" IS NULL
         `);
 
         for (const key of files) {
@@ -225,8 +227,6 @@ export class GetPostsQuery
 
             const newPost: PostsViewDto = {
                 ...post,
-                ...post.extendedLikesInfo,
-                ...post.extendedLikesInfo.newestLikes,
                 images: {
                     main: imgs,
                 },

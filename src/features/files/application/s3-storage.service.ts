@@ -38,6 +38,7 @@ export class S3StorageService {
 
     getKey(
         userId: string,
+        parentId: string,
         originalName: string,
         mimetype: string,
         type: FileTypeEnum,
@@ -45,9 +46,9 @@ export class S3StorageService {
         const extension = mimetype.split('/')[1];
 
         if (type === FileTypeEnum.wallpaper) {
-            return `social_network/users/${userId}/${type}/${originalName}_image.${extension}`;
+            return `social_network/users/${userId}/${parentId}/${type}/${originalName}_image.${extension}`;
         } else if (type === FileTypeEnum.main) {
-            return `social_network/users/${userId}/${type}/${Date.now()}_${originalName}_image.${extension}`;
+            return `social_network/users/${userId}/${parentId}/${type}/${Date.now()}_${originalName}_image.${extension}`;
         }
     }
 
@@ -55,8 +56,9 @@ export class S3StorageService {
         return await this.s3StorageRepository.getFile(key);
     }
 
-    async uploadObject(
+    async uploadFileBetter(
         userId: string,
+        parentId: string,
         originalName: string,
         mimetype: string,
         buffer: Buffer,
@@ -71,7 +73,7 @@ export class S3StorageService {
             infer: true,
         });
 
-        const key = this.getKey(userId, originalName, mimetype, type);
+        const key = this.getKey(userId, parentId, originalName, mimetype, type);
 
         const bucketParams = {
             Bucket: apiSettings.YANDEX_S3_BUCKET_NAME,
@@ -99,6 +101,55 @@ export class S3StorageService {
         }
     }
 
+    async uploadFile(
+        userId: string,
+        parentId: string,
+        originalName: string,
+        mimetype: string,
+        buffer: Buffer,
+        type: FileTypeEnum,
+    ) {
+        if (!['image/png', 'image/jpeg'].includes(mimetype)) {
+            throw new Error(
+                'Unsupported file type. Only PNG and JPEG are allowed.',
+            );
+        }
+        const apiSettings = this.configService.get('apiSettings', {
+            infer: true,
+        });
+
+        const key = this.getKey(userId, parentId, originalName, mimetype, type);
+
+        const bucketParams = {
+            Bucket: apiSettings.YANDEX_S3_BUCKET_NAME,
+            Key: key,
+            Body: buffer,
+            ContentType: mimetype,
+        };
+
+        const command = new PutObjectCommand(bucketParams);
+        try {
+            await this.s3Client.send(command);
+
+            const preSignedKey = await this.getPreSignedUrl(key);
+            if (!preSignedKey) {
+                return null;
+            }
+
+            return {
+                url: preSignedKey,
+                key: key,
+            };
+        } catch (err) {
+            console.error('Error uploading file:', err);
+            return null;
+        }
+    }
+
+    async deleteRecordAboutFile(id: string) {
+        return await this.s3StorageRepository.deleteRecordAboutFile(id);
+    }
+
     async createRecordAboutFile(
         key: string,
         fileSize: string,
@@ -107,6 +158,7 @@ export class S3StorageService {
         typeFile: string,
         blogId: string,
         postId: string,
+        url: string,
     ) {
         return await this.s3StorageRepository.createRecordAboutFile(
             key,
@@ -114,12 +166,16 @@ export class S3StorageService {
             height,
             width,
             typeFile,
+            url,
             blogId,
             postId,
         );
     }
 
-    async getPreSignedUrl(key: string) {
+    /*
+     * этот вариант лучше так как формирует ссылки временные и не надо хранить в бд ничего
+     * */
+    async getPreSignedUrlBetter(key: string) {
         const apiSettings = this.configService.get('apiSettings', {
             infer: true,
         });
@@ -133,6 +189,36 @@ export class S3StorageService {
         try {
             const url = await getSignedUrl(this.s3Client, command, {
                 expiresIn: 360, //360 секунд жить будет
+            });
+
+            console.log('url is receiving', url);
+            return url;
+        } catch (err) {
+            console.error('Error getting pre-signed url:', err);
+            return null;
+        }
+    }
+
+    async getPreSignedUrl(key: string) {
+        const apiSettings = this.configService.get('apiSettings', {
+            infer: true,
+        });
+
+        const bucketParams: GetObjectCommandInput = {
+            Bucket: apiSettings.YANDEX_S3_BUCKET_NAME,
+            Key: key,
+        };
+
+        const file = await this.s3StorageRepository.getFile(key);
+
+        if (file) {
+            return file.url;
+        }
+
+        const command = new GetObjectCommand(bucketParams);
+        try {
+            const url = await getSignedUrl(this.s3Client, command, {
+                expiresIn: 60 * 60 * 24 * 7, //неделя в секундах
             });
 
             console.log('url is receiving', url);
@@ -179,7 +265,7 @@ export class S3StorageService {
             return data;
         } catch (exeption) {
             console.error('Exeption', exeption);
-            throw exeption;
+            return null;
         }
     }
 

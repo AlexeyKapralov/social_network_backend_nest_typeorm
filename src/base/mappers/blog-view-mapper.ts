@@ -8,7 +8,7 @@ export const blogViewDtoMapper = (
     blog: Blog,
     files: Pick<
         File,
-        'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+        'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile' | 'blogId'
     >[],
 ): BlogViewDto => {
     const mainArr: PhotoSizeViewDto[] = [];
@@ -30,15 +30,20 @@ export const blogViewDtoMapper = (
     }
 
     files.forEach((file) => {
-        if (file.typeFile === FileTypeEnum.wallpaper) {
-            const wallpaperMapped: PhotoSizeViewDto = {
+        if (
+            file.typeFile === FileTypeEnum.wallpaper &&
+            file.blogId === blog.id
+        ) {
+            wallpaper = {
                 fileSize: Number(file.fileSize),
                 url: file.fileKey,
                 width: Number(file.width),
                 height: Number(file.height),
             };
-            wallpaper = wallpaperMapped;
-        } else if (file.typeFile === FileTypeEnum.main) {
+        } else if (
+            file.typeFile === FileTypeEnum.main &&
+            file.blogId === blog.id
+        ) {
             const mainMapped: PhotoSizeViewDto = {
                 fileSize: Number(file.fileSize),
                 url: file.fileKey,

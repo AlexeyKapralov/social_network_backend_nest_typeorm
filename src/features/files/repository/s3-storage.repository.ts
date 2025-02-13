@@ -22,6 +22,7 @@ export class S3StorageRepository {
         height: string,
         width: string,
         typeFile: string,
+        url: string,
         blogId: string = null,
         postId: string = null,
     ): Promise<File> {
@@ -40,6 +41,7 @@ export class S3StorageRepository {
                 blogId: blogId,
                 postId: postId,
                 fileKey: key,
+                url: url,
                 createdAt: new Date(),
                 deletedDate: null,
             });
@@ -50,6 +52,32 @@ export class S3StorageRepository {
         } catch (e) {
             await queryRunner.rollbackTransaction();
             return null;
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
+    async deleteRecordAboutFile(id: string): Promise<boolean> {
+        const queryRunner = this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction('REPEATABLE READ');
+
+        try {
+            //создать игру
+            await this.fileRepo.update(
+                {
+                    id: id,
+                },
+                {
+                    deletedDate: new Date(),
+                },
+            );
+            await queryRunner.commitTransaction();
+            return true;
+        } catch (e) {
+            await queryRunner.rollbackTransaction();
+            return false;
         } finally {
             await queryRunner.release();
         }

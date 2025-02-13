@@ -44,6 +44,6 @@ export enum InterlayerStatuses {
     //Начало с 2, т.к. 1 занят untitled ошибкой
     NOT_FOUND = 2,
     FORBIDDEN = 3,
-    BAD_REQUEST = 3,
-    UNAUTHORIZED = 4,
+    BAD_REQUEST = 4,
+    UNAUTHORIZED = 5,
 }

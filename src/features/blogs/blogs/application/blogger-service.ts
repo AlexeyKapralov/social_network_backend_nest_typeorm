@@ -42,7 +42,7 @@ export class BloggerService {
 
         const files: Pick<
             File,
-            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile'
+            'fileKey' | 'fileSize' | 'height' | 'width' | 'typeFile' | 'blogId'
         >[] = [];
         notice.addData(blogViewDtoMapper(blog, files));
         return notice;
@@ -326,6 +326,7 @@ export class BloggerService {
 
         const key = this.s3StorageService.getKey(
             userId,
+            blogId,
             file.originalname,
             file.mimetype,
             FileTypeEnum.wallpaper,
@@ -337,13 +338,14 @@ export class BloggerService {
             notice.addError(
                 'file is already exists',
                 '',
-                InterlayerStatuses.NOT_FOUND,
+                InterlayerStatuses.BAD_REQUEST,
             );
             return notice;
         }
 
-        const isUploadPhotoForBlog = await this.s3StorageService.uploadObject(
+        const isUploadPhotoForBlog = await this.s3StorageService.uploadFile(
             userId,
+            blogId,
             file.originalname,
             file.mimetype,
             file.buffer,
@@ -368,6 +370,7 @@ export class BloggerService {
                 FileTypeEnum.wallpaper,
                 blogId,
                 null,
+                isUploadPhotoForBlog.url,
             );
         if (!createFileRecord) {
             notice.addError(
@@ -420,13 +423,15 @@ export class BloggerService {
 
         const key = this.s3StorageService.getKey(
             userId,
+            blogId,
             file.originalname,
             file.mimetype,
             FileTypeEnum.wallpaper,
         );
 
-        const isUploadPhotoForBlog = await this.s3StorageService.uploadObject(
+        const isUploadPhotoForBlog = await this.s3StorageService.uploadFile(
             userId,
+            blogId,
             file.originalname,
             file.mimetype,
             file.buffer,
@@ -451,6 +456,7 @@ export class BloggerService {
                 FileTypeEnum.main,
                 blogId,
                 null,
+                isUploadPhotoForBlog.url,
             );
         if (!createFileRecord) {
             notice.addError(
@@ -541,6 +547,7 @@ export class BloggerService {
 
         const keyOriginal = this.s3StorageService.getKey(
             userId,
+            postId,
             `${file.originalname}_original`,
             file.mimetype,
             FileTypeEnum.wallpaper,
@@ -548,6 +555,7 @@ export class BloggerService {
 
         const keyMiddle = this.s3StorageService.getKey(
             userId,
+            postId,
             `${file.originalname}_middle`,
             file.mimetype,
             FileTypeEnum.wallpaper,
@@ -555,14 +563,16 @@ export class BloggerService {
 
         const keySmall = this.s3StorageService.getKey(
             userId,
+            postId,
             `${file.originalname}_small`,
             file.mimetype,
             FileTypeEnum.wallpaper,
         );
 
         const isUploadOriginalPhotoForBlog =
-            await this.s3StorageService.uploadObject(
+            await this.s3StorageService.uploadFile(
                 userId,
+                postId,
                 `${file.originalname}_original`,
                 file.mimetype,
                 file.buffer,
@@ -570,16 +580,18 @@ export class BloggerService {
             );
 
         const isUploadMiddlePhotoForBlog =
-            await this.s3StorageService.uploadObject(
+            await this.s3StorageService.uploadFile(
                 userId,
+                postId,
                 `${file.originalname}_middle`,
                 file.mimetype,
                 fileBufferMiddle,
                 FileTypeEnum.main,
             );
         const isUploadSmallPhotoForBlog =
-            await this.s3StorageService.uploadObject(
+            await this.s3StorageService.uploadFile(
                 userId,
+                postId,
                 `${file.originalname}_small`,
                 file.mimetype,
                 fileBufferSmall,
@@ -608,6 +620,7 @@ export class BloggerService {
                 FileTypeEnum.main,
                 null,
                 postId,
+                isUploadOriginalPhotoForBlog.url,
             );
         const metadataMiddle = await sharp(fileBufferMiddle).metadata();
         const createFileRecordMiddle =
@@ -619,6 +632,7 @@ export class BloggerService {
                 FileTypeEnum.main,
                 null,
                 postId,
+                isUploadMiddlePhotoForBlog.url,
             );
         const metadataSmall = await sharp(fileBufferSmall).metadata();
         const createFileRecordSmall =
@@ -630,6 +644,7 @@ export class BloggerService {
                 FileTypeEnum.main,
                 null,
                 postId,
+                isUploadSmallPhotoForBlog.url,
             );
         if (
             !createFileRecordOriginal ||
@@ -680,7 +695,7 @@ export class BloggerService {
             return notice;
         }
 
-        if (metadata.width > maxWidth || metadata.height > maxHeight) {
+        if (metadata.width !== maxWidth || metadata.height !== maxHeight) {
             console.log(
                 `Image size validation failed: ${metadata.width}x${metadata.height}`,
             );
